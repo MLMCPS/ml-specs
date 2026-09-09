@@ -1,0 +1,11 @@
+{
+  "name": "ml-specs",
+  "description": "Spec-driven development for any stack (Java/Spring, React, Node/Express, NestJS; MySQL/PostgreSQL/MongoDB): a stack-aware coding agent + spec author/developer/reviewer/pr-author agents, and the evidence-gated loop /spec, /spec-review, /spec-build, /spec-verify, /spec-advance, /spec-fanout, /pr, plus /code, /fix, /nfr and the knowledge layer /repo-init, /repo-rollout, /repo-adopt, /repo-estate, /repo-impact, /repo-refresh, /repo-doctor, /repo-status.",
+  "version": "1.0.0",
+  "author": {
+    "name": "Motivity Labs"
+  },
+  "homepage": "https://github.com/MLMCPS/ml-claude-plugins",
+  "repository": "https://github.com/MLMCPS/ml-claude-plugins",
+  "license": "MIT"
+}

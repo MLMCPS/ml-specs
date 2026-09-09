@@ -1,0 +1,17 @@
+{
+  "//": "MCP server bundled WITH the plugin. Because the path is ${CLAUDE_PLUGIN_ROOT}-relative,",
+  "//1": "it resolves wherever the plugin was installed from — a git marketplace, a local directory,",
+  "//2": "any machine. No absolute paths, so nothing here is specific to one developer's laptop.",
+  "//3": "",
+  "//4": "--root . means the server reads whichever repo the session is in. It is READ-ONLY and",
+  "//5": "makes no network calls: it answers questions about local files and returns nothing on its own.",
+  "//6": "",
+  "//7": "If a client does not pick this up automatically, fall back to copying",
+  "//8": "templates/mcp/.mcp.json into the target repo and filling in an absolute path.",
+  "mcpServers": {
+    "ml-specs": {
+      "command": "node",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/mcp/ml-specs-server.mjs", "--root", "."]
+    }
+  }
+}

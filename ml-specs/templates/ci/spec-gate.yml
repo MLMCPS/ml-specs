@@ -1,0 +1,69 @@
+# Spec gate — seeded by /repo-init (ml-specs).
+# Copy to .github/workflows/spec-gate.yml.
+#
+# Fails a pull request that does not trace back to an approved spec. Every check
+# here is deterministic: no LLM call, no API key, no network. Same verdict every
+# run, in well under a second — which matters more than it sounds, because a gate
+# that adds minutes to CI gets disabled within a month, and then you have
+# governance theatre.
+#
+# ADOPTING THIS ON AN EXISTING REPO: start with `continue-on-error: true` on the
+# blocking steps for a fortnight and watch how often it WOULD have failed. A gate
+# that fails on day one gets disabled on day two. Turn it on deliberately, once
+# you can defend the number.
+
+name: spec-gate
+
+on:
+  pull_request:
+
+jobs:
+  spec-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # --- the branch must carry a spec key --------------------------------
+      # The chain starts here. A branch named `fix/payment-thing` cannot be
+      # traced to anything, and nothing downstream can recover the link.
+      - name: Branch carries a spec key
+        run: |
+          BRANCH="${{ github.head_ref }}"
+          if ! echo "$BRANCH" | grep -Eq '^(feat|fix|chore)/[0-9]{4}[a-z]?-'; then
+            echo "::error::branch '$BRANCH' carries no spec number."
+            echo "Expected feat/NNNN-slug. See specs/README.md."
+            exit 1
+          fi
+          echo "SPEC_ID=$(echo "$BRANCH" | sed -E 's#^[a-z]+/([0-9]{4}[a-z]?)-.*#\1#')" >> "$GITHUB_ENV"
+
+      # --- that spec must exist and be past the approval gate ---------------
+      - name: Spec is approved
+        run: |
+          FILE=$(ls specs/${SPEC_ID}-*.md 2>/dev/null | head -1)
+          if [ -z "$FILE" ]; then
+            echo "::error::no spec file for ${SPEC_ID}."
+            exit 1
+          fi
+          STATUS=$(grep -m1 -E '^\|\s*\*\*Status\*\*' "$FILE" | sed -E 's/.*\|\s*\*\*Status\*\*\s*\|\s*([^|]*).*/\1/' | xargs)
+          case "$STATUS" in
+            Approved|Implemented|Verified) echo "spec ${SPEC_ID} is $STATUS" ;;
+            *)
+              echo "::error::spec ${SPEC_ID} is '${STATUS:-unset}', not Approved."
+              echo "Nothing crosses into execution before the approval gate."
+              exit 1 ;;
+          esac
+
+      # --- the whole chain still resolves ----------------------------------
+      - name: Trace chain intact
+        run: node .github/scripts/spec-trace.mjs "$SPEC_ID"
+
+      # --- NFRs are routed, and none has been flattened into a story --------
+      - name: NFRs routed
+        run: node .github/scripts/nfr-compile.mjs
+
+      # --- the mechanical half of the lifecycle gate ------------------------
+      - name: Spec evidence
+        run: node .github/scripts/spec-gate.mjs "$(ls specs/${SPEC_ID}-*.md | head -1)"

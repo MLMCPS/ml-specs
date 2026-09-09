@@ -1,0 +1,23 @@
+{
+  "//": "Hooks that ship with ml-specs and activate on install. Only universal, fast,",
+  "//1": "project-agnostic automation belongs here — everything that needs THIS project's real",
+  "//2": "commands (format, lint, test) stays opt-in in templates/hooks/settings.hooks.example.json.",
+  "//3": "knowledge-drift is silent unless there is drift; secret-scan is the only one that blocks.",
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/knowledge-drift.sh" }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/secret-scan.sh" }
+        ]
+      }
+    ]
+  }
+}

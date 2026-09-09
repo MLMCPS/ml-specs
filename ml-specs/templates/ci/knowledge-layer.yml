@@ -1,0 +1,35 @@
+# Knowledge-layer CI gate — seeded by /repo-init (ml-specs).
+# Copy to .github/workflows/knowledge-layer.yml, with knowledge-check.mjs at .github/scripts/.
+#
+# Fails a PR when the docs assert something about the repo that is no longer true — a
+# `file:line` pointing at deleted code, a router row pointing at a missing shard. Those are
+# facts, not judgment, so they belong in CI. The judgment half stays in /repo-doctor.
+#
+# ADOPTING THIS ON AN EXISTING REPO: the first run usually finds real staleness. Start with
+# `--warn-only` below, run /repo-refresh to clear the backlog, then remove the flag. A gate
+# that fails on day one gets disabled on day two.
+
+name: knowledge-layer
+
+on:
+  pull_request:
+  push:
+    branches: [main, master]
+
+jobs:
+  knowledge-layer:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # the advisory check diffs against the base branch
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Check the knowledge layer still matches the code
+        run: |
+          node .github/scripts/knowledge-check.mjs \
+            --base "origin/${{ github.event.pull_request.base.ref || github.event.repository.default_branch }}"
+          # While adopting, append: --warn-only

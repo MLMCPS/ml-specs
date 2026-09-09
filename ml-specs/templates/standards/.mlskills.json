@@ -1,0 +1,24 @@
+{
+  "$comment": "Architecture standards config for ml-skills, seeded by /repo-init. Every standard starts 'proposed', which means it reports at warn and CANNOT fail a build. Ratify one — set status to 'standard' — only once a human has read the decisions and agreed they can break the build. See the package's RATIFY.md.",
+  "$owner": "<team that owns these standards>",
+
+  "exclude": [
+    "**/fixtures/**",
+    "**/__mocks__/**"
+  ],
+
+  "openapi-contract": { "status": "proposed" },
+  "entity-relationships": { "status": "proposed" },
+  "backend-patterns": { "status": "proposed" },
+  "infra-patterns": { "status": "proposed" },
+  "ui-patterns": { "status": "proposed" },
+  "security-patterns": { "status": "proposed" },
+  "testing-patterns": { "status": "proposed" },
+  "events-messaging": { "status": "proposed" },
+  "observability": { "status": "proposed" },
+  "resilience-patterns": { "status": "proposed" },
+  "config-secrets": { "status": "proposed" },
+
+  "$customRules_note": "/nfr writes machine-checkable non-functional requirements here as custom rules, so an NFR that was agreed becomes something that actually fails a build rather than prose in a document nothing reads.",
+  "customRules": []
+}

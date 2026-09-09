@@ -1,0 +1,18 @@
+{
+  "//": "Committed project settings for Claude Code. Copy to the REPO ROOT as .claude/settings.json",
+  "//1": "and commit it: every teammate who clones the repo gets this with no per-machine setup, and",
+  "//2": "personal overrides still live in .claude/settings.local.json, which this does not touch.",
+  "//3": "",
+  "//4": "attribution — commits and PRs name the humans who own the change. An empty string suppresses",
+  "//5": "that trailer entirely, so no assistant is ever recorded as co-author. This is enforced by",
+  "//6": "Claude Code itself rather than being an instruction a model has to remember, which is why it",
+  "//7": "belongs here and not only in CLAUDE.md.",
+  "//8": "",
+  "//9": "Why it matters beyond one commit: a squash merge aggregates Co-Authored-By trailers from",
+  "//10": "EVERY commit on the branch, so a single stray line added early resurfaces on the merge",
+  "//11": "commit long after, crediting a tool instead of the people who did the work.",
+  "attribution": {
+    "commit": "",
+    "pr": ""
+  }
+}

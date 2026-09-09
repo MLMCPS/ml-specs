@@ -1,0 +1,87 @@
+<!--
+  Shared CLAUDE.md sections from the ml-specs plugin — merge into each service's CLAUDE.md.
+  Loaded on EVERY session in every repo that adopts it, so every line is paid for continuously:
+  keep only what is specific to this toolkit or this project. The full coding contract lives in
+  the plugin's `coder` agent, which carries it when it runs; don't restate it here.
+-->
+
+## Knowledge layer — indexing, retrieval, summaries
+
+These docs load into context, so load the **least** that answers the task, in this order:
+
+0. **`CLAUDE.md` (this file)** — always in context, so it stays a thin index: stack one-liner,
+   build/test/lint commands, and links. It points; it never inlines.
+1. **`docs/PATTERNS.md`** — when writing/changing code (skip for Q&A or trivial edits). New code
+   MUST match it. In a monorepo, read only the relevant package's section.
+2. **`docs/ARCHITECTURE.md`** — when you need to find where something lives. Read the relevant
+   section, not the file. If **sharded**, it's a router: read it, then only your module's shard.
+3. **`docs/ESTATE.md`** — only when the task touches an event or a cross-service call. Generated
+   by `/repo-estate`; don't hand-maintain it.
+4. **Agentic retrieval last** — `Explore` / grep / glob, for exact lines only.
+
+**Standards are a different axis from these docs, not another rung on the ladder.**
+`docs/PATTERNS.md` **describes** how this repo happens to write code; the architecture standards
+(`.mlskills.json`, the `ml-skills` MCP server, `npx @mlmcps/ml-skills`) **prescribe** how it must.
+Read the relevant standard before writing code the standard governs — an API contract, a migration,
+a Dockerfile, anything touching auth or personal data. When a standard and the local code
+disagree, the **code** is what is wrong: flag the divergence rather than copying local style. That
+is the single case where "match the surrounding code" does not apply.
+
+**Token discipline:** cite `file:line` rather than pasting code; read file *ranges* once a summary
+says where to look; never re-read a doc already in context.
+
+Sharded docs, interlinked modules, or a change crossing a module/service boundary? Load the
+ml-specs **`knowledge-retrieval`** skill for that procedure — and not otherwise.
+
+**Keep summaries fresh** (`/repo-refresh`) after changing endpoints, listeners, external clients, or
+data-access flavor. A stale summary is worse than none.
+
+## Working agreement (coding-agent contract)
+
+The full contract lives in the plugin's `coder` agent. What binds *all* work here:
+
+1. **Inspect before assuming** structure or stack — the code is the source of truth and overrides
+   any default you'd otherwise reach for.
+2. **Smallest correct change**, matching the surrounding file's naming, layering, error handling
+   and tests. Reuse what's there; justify any new dependency or abstraction.
+3. **ASK rather than guess on contracts** — API shape, data model or migration, error/status codes,
+   scope boundary, compatibility. A guessed contract costs more to undo than to ask about.
+
+**Quality gates (run this repo's real commands — never invent them):** test (unit + integration +
+functional/E2E), lint, and typecheck, filled in below; final acceptance runs the full suite end to
+end. Schema changes ship as **migrations** or schema/index updates, never hand edits. Secrets come
+from env.
+
+<!-- /repo-init fills the real commands for this repo, e.g.:
+- Test: `npm test` / `mvn test` / `pytest` …
+- Lint/format: `npm run lint` / `./gradlew spotlessCheck` …
+- Typecheck: `tsc --noEmit` … -->
+
+## Spec-driven development
+
+Non-trivial changes start with a reviewable spec, not code. See `specs/README.md`. The loop:
+`/spec <ticket>` → human reviews → `/spec-advance … Approved` → `/spec-build` (test-first, one
+functional/E2E test per user-facing criterion) → `/spec-verify` (adversarial + full suite green,
+§6.1) → `/code-review` → `/spec-advance … Verified` → `/pr` → merge → `/spec-advance … Archived`.
+
+Status is only ever written by `/spec-advance`, which refuses a transition whose evidence isn't
+there. `/repo-status` shows the board; `/repo-doctor` flags statuses the repo can't back up.
+
+Anything not in the approved spec is out of scope — update the spec first. Trivial one-line fixes
+are exempt: `/code` for those, `/spec` when a change touches an API, data model, event, or several
+files. (`/code-review` and `/security-review` are built-in Claude Code commands.)
+
+## Git & PR workflow
+
+- **Branch** off the default branch; never commit straight to it. Follow the repo's existing branch
+  naming (e.g. `feature/TICKET-slug`). Commits are small, focused, present-tense imperative, and
+  keep the spec in the same branch/PR as its implementation.
+- **Before a PR:** quality gates pass, `/code-review` is clean, every acceptance criterion has a
+  passing test. Don't commit secrets, generated artifacts, or unrelated reformatting.
+- **No AI attribution anywhere in the history.** Commit messages, commit trailers, PR titles and
+  PR bodies name the humans who own the change and nothing else. Never add a `Co-Authored-By:`
+  line for an assistant, a "Generated with"/"Made with" line, a model or vendor name, or a
+  tool badge or emoji. A `Co-Authored-By:` trailer is only ever a real teammate. This holds for
+  every commit on the branch, not just the last one — a squash merge aggregates trailers from
+  all of them, so one stray line resurfaces on the merge commit.
+- Only commit or push when the human asks; surface the diff for review first.

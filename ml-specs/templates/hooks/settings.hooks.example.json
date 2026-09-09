@@ -1,0 +1,32 @@
+{
+  "//": "OPTIONAL example hooks — the PROJECT-SPECIFIC ones the plugin cannot ship for you,",
+  "//1": "because it can't know your format/lint/test commands. Copy what you want into this",
+  "//2": "repo's .claude/settings.json and REPLACE the commands with the real ones. Hooks run",
+  "//3": "automatically, so keep them fast and non-destructive. Delete this file after wiring up.",
+
+  "//4": "ALREADY SHIPPED BY THE PLUGIN — do not copy these, they are active on install:",
+  "//5": "  SessionStart  → knowledge-layer drift warning (silent unless drifted)",
+  "//6": "  PreToolUse    → staged-diff secret scan (blocks the commit; allowlist at",
+  "//7": "                  .claude/secret-allowlist.txt). See ml-specs/hooks/.",
+
+  "hooks": {
+    "//PostToolUse": "Auto-format / lint the file just edited. Pick the matcher + command for your stack.",
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "//note": "JS/TS example — run prettier on changed files. Swap for your formatter (spotlessApply, black, gofmt…).",
+        "hooks": [
+          { "type": "command", "command": "npx --no-install prettier --write \"$CLAUDE_FILE_PATHS\" 2>/dev/null || true" }
+        ]
+      }
+    ],
+    "//Stop": "Remind to run the quality gates before finishing. Replace with the real test command.",
+    "Stop": [
+      {
+        "hooks": [
+          { "type": "command", "command": "echo 'Reminder: run the project test + lint + typecheck before opening a PR.'" }
+        ]
+      }
+    ]
+  }
+}

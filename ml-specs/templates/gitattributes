@@ -1,0 +1,18 @@
+# Normalize line endings: store LF in the repo, check out LF on all platforms.
+# Prevents the whole-repo CRLF/LF "phantom diff" churn.
+* text=auto eol=lf
+
+# Keep Windows scripts as CRLF
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Treat known binaries as binary (no EOL conversion, no diff)
+*.jar binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.zip binary
+*.gz binary

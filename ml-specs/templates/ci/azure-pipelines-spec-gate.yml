@@ -1,0 +1,64 @@
+# Spec gate for Azure DevOps — seeded by /repo-init (ml-specs).
+#
+# Wire this as a BUILD VALIDATION POLICY on the target branch with "Block merge
+# when the build fails" enabled. A pipeline that runs and reports changes
+# nothing: the gate is the policy, not the build.
+#
+#   node scripts/branch-policy.mjs install <repo> --dry-run   # read the request first
+#   node scripts/branch-policy.mjs install <repo>
+#   node scripts/branch-policy.mjs audit <repo>               # is it still blocking?
+#
+# Every check below is deterministic — no LLM call, no API key, no network.
+
+trigger: none
+pr:
+  branches:
+    include: [main]
+
+pool:
+  vmImage: ubuntu-latest
+
+steps:
+  - task: NodeTool@0
+    displayName: Node 20
+    inputs:
+      versionSpec: '20.x'
+
+  - script: |
+      set -e
+      BRANCH="$(System.PullRequest.SourceBranch)"
+      BRANCH="${BRANCH#refs/heads/}"
+      if ! echo "$BRANCH" | grep -Eq '^(feat|fix|chore)/[0-9]{4}[a-z]?-'; then
+        echo "##vso[task.logissue type=error]branch '$BRANCH' carries no spec number. Expected feat/NNNN-slug."
+        exit 1
+      fi
+      ID=$(echo "$BRANCH" | sed -E 's#^[a-z]+/([0-9]{4}[a-z]?)-.*#\1#')
+      echo "##vso[task.setvariable variable=SPEC_ID]$ID"
+    displayName: 'Gate: branch carries a spec key'
+
+  - script: |
+      set -e
+      FILE=$(ls specs/$(SPEC_ID)-*.md 2>/dev/null | head -1)
+      [ -z "$FILE" ] && { echo "##vso[task.logissue type=error]no spec file for $(SPEC_ID)."; exit 1; }
+      STATUS=$(grep -m1 -E '^\|\s*\*\*Status\*\*' "$FILE" | sed -E 's/.*\|\s*\*\*Status\*\*\s*\|\s*([^|]*).*/\1/' | xargs)
+      case "$STATUS" in
+        Approved|Implemented|Verified) echo "spec $(SPEC_ID) is $STATUS" ;;
+        *) echo "##vso[task.logissue type=error]spec $(SPEC_ID) is '${STATUS:-unset}', not Approved."; exit 1 ;;
+      esac
+    displayName: 'Gate: spec is approved'
+
+  - script: node scripts/spec-trace.mjs $(SPEC_ID)
+    displayName: 'Gate: trace chain intact'
+
+  - script: node scripts/nfr-compile.mjs
+    displayName: 'Gate: NFRs routed, none flattened into a story'
+
+  # Self-referential on purpose. The commonest way this stops working is someone
+  # demoting the policy to advisory — nothing breaks, no test fails, and merges
+  # quietly stop being gated. So the gate audits itself.
+  - script: node scripts/branch-policy.mjs audit $(Build.Repository.Name)
+    displayName: 'Gate: the branch policy is still blocking'
+    env:
+      ADO_ORG: $(System.TeamFoundationCollectionUri)
+      ADO_PROJECT: $(System.TeamProject)
+      ADO_PAT: $(System.AccessToken)
