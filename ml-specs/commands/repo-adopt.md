@@ -4,7 +4,7 @@ argument-hint: (no args) — run from the root of a repo that already has its ow
 ---
 
 You are adopting the ml-specs into a repo that **already has a knowledge layer someone wrote by
-hand**. `/repo-init` assumes a blank slate; this doesn't. The difference matters because the fastest
+hand**. `/ml-specs:repo-init` assumes a blank slate; this doesn't. The difference matters because the fastest
 way to make a team distrust a tool is to have it clobber documentation they wrote.
 
 **The rule for this entire command: human prose is never deleted and never silently rewritten.**
@@ -28,14 +28,14 @@ The plugin's templates live under `${CLAUDE_PLUGIN_ROOT}/templates/`.
    - **Missing** — toolkit sections with no counterpart (the working agreement, the spec loop, the
      knowledge-layer index, quality gates).
 
-3. **Check the existing content against the code**, the same way `/repo-init` learns. Where a
+3. **Check the existing content against the code**, the same way `/ml-specs:repo-init` learns. Where a
    hand-written claim is now wrong (a command that no longer exists, a pattern the code abandoned),
    **do not correct it silently** — collect it for the report. A stale claim a human wrote is
    still theirs to retire.
 
 ## Phase 2 — learn what's missing
 
-4. Run `/repo-init`'s Phase 1 learning, but **only for what the existing docs don't already cover**.
+4. Run `/ml-specs:repo-init`'s Phase 1 learning, but **only for what the existing docs don't already cover**.
    Don't re-derive conventions they've already written down — read theirs, verify it, and move on.
    The point is to fill gaps, not to produce a second opinion on everything.
 
@@ -48,7 +48,7 @@ The plugin's templates live under `${CLAUDE_PLUGIN_ROOT}/templates/`.
    over budget, say so and propose what to move out; don't do it unasked.
 
 6. **`docs/PATTERNS.md`** — if they have an equivalent under any name, extend it in their format
-   and mark **only what you added** as `(inferred)`. If there's nothing, generate it as `/repo-init`
+   and mark **only what you added** as `(inferred)`. If there's nothing, generate it as `/ml-specs:repo-init`
    would. Never reformat their existing patterns into the template's shape.
 
 7. **`docs/ARCHITECTURE.md`** — same. If their structure doc is organised differently (by feature,
@@ -58,8 +58,14 @@ The plugin's templates live under `${CLAUDE_PLUGIN_ROOT}/templates/`.
 8. **`specs/`** — scaffold `README.md`, `TEMPLATE.md`, `AGENTS.md` if absent. If they already have a
    spec/RFC/ADR practice, **map onto it instead of replacing it**: keep their directory, their
    numbering, and their template's sections, and add only what the loop needs (acceptance criteria
-   that are testable, the §6.1 final-acceptance gate, the Status field `/spec-advance` reads).
+   that are testable, the §6.1 final-acceptance gate, the Status field `/ml-specs:spec-advance` reads).
    Report the mapping so they can see what changed about their process.
+
+8b. **`docs/SKILLS.md`** — if `ml-skills` is available, run **`/ml-specs:repo-skills`** to record the
+   catalog skills matching the stack, reusing the learning from Phase 2 rather than re-scanning.
+   If they already keep an equivalent list under any name, **extend theirs in their format** and do
+   not introduce a second file — the adopt rule applies here as everywhere: merge, never replace.
+   If ml-skills is not installed, skip it and say so in one line.
 
 9. **Commit attribution** — merge the `attribution` key from
    `${CLAUDE_PLUGIN_ROOT}/templates/settings.json` into `.claude/settings.json`, creating the file
@@ -80,7 +86,7 @@ The plugin's templates live under `${CLAUDE_PLUGIN_ROOT}/templates/`.
     - **Conflicts** — where their docs and the code disagree, each with `file:line` evidence and
       **no change made**. These are decisions for them, not for you.
 
-    Then: what to review first, and that `/repo-doctor` will now keep checking it. Do NOT commit.
+    Then: what to review first, and that `/ml-specs:repo-doctor` will now keep checking it. Do NOT commit.
 
 If the repo has no knowledge layer at all, this is the wrong command — say so and point at
-`/repo-init`. If it has one the toolkit already generated, point at `/repo-refresh`.
+`/ml-specs:repo-init`. If it has one the toolkit already generated, point at `/ml-specs:repo-refresh`.

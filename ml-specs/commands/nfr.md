@@ -98,7 +98,7 @@ nearest one — a mis-filed rule is a rule nobody looks for.
 Say which constraint ids changed — the script reports exactly that, and reports
 nothing when the write was a no-op. Do not claim an update that did not happen.
 
-Mention that the next `/spec` on an affected repo will carry these constraints
+Mention that the next `/ml-specs:spec` on an affected repo will carry these constraints
 into the new spec automatically, so nobody has to remember they exist. If any of
 them were also compiled into `ml-skills` rules, say which — those fire while the
 code is being written, not just when it is reviewed.

@@ -8,9 +8,9 @@ Bug: **$ARGUMENTS**
 You are fixing a **defect** — something that already claims to work and doesn't. That is a different
 shape of problem from a feature, and it wants different ceremony.
 
-`/spec` is built for features: it asks what the contract *should* be. A bug already has a contract —
+`/ml-specs:spec` is built for features: it asks what the contract *should* be. A bug already has a contract —
 the code is just violating it. Writing a feature-shaped spec for a null-pointer wastes everyone's
-time, which is why bugs currently get dropped into `/code` with no discipline at all. This is the
+time, which is why bugs currently get dropped into `/ml-specs:code` with no discipline at all. This is the
 middle path: same rigor, a fifth of the paperwork.
 
 **The discipline is one rule: the failing test comes first.** A fix without a test that failed
@@ -44,14 +44,14 @@ before it is a fix you are guessing at, and nothing stops the bug returning.
    path, the same unguarded input elsewhere. Search for the pattern and report what you find. Fix
    them only if trivial and clearly the same defect; otherwise list them for a decision.
 
-## When to stop and escalate to `/spec`
+## When to stop and escalate to `/ml-specs:spec`
 
 Stop and say so if the fix would **change a contract** — an API shape, a status or error code, a
 data model, an event payload, or behavior another service depends on. At that point it isn't a bug
 fix, it's a change of intent, and it needs the contract on paper first. Also escalate if the "bug"
 turns out to be the code behaving as specified and the *spec* being wrong.
 
-If the change touches a published contract, run `/repo-impact` before shipping — a fix that corrects
+If the change touches a published contract, run `/ml-specs:repo-impact` before shipping — a fix that corrects
 your service and breaks a consumer is not a fix.
 
 ## Output

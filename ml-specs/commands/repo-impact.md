@@ -9,13 +9,13 @@ Target: **$ARGUMENTS** (a spec file, or the current branch diff if empty).
 You are answering one question: **who else breaks if this ships?** Read-only — report, don't fix.
 
 This is the failure an estate actually dies of. A change that is correct inside its own repo and
-still takes down a consumer is not caught by tests, `/code-review`, or `/spec-verify`, because every
+still takes down a consumer is not caught by tests, `/code-review`, or `/ml-specs:spec-verify`, because every
 one of those looks only at this repo.
 
 ## Step 0 — establish whether you can answer at all
 
 Read `docs/ESTATE.md`. **If it's missing, or its contract index is mostly `_TBD_`, stop and say so
-plainly**: you cannot distinguish "no consumers" from "no index". Recommend `/repo-estate`, and do
+plainly**: you cannot distinguish "no consumers" from "no index". Recommend `/ml-specs:repo-estate`, and do
 not produce a clean bill of health — a false "nothing affected" here is worse than no answer,
 because it gets believed.
 
@@ -73,5 +73,5 @@ designed but not written down, and the person deploying won't know.
 - **Spec gaps** — what §7 needs to say and doesn't.
 
 Next: put any breaking finding into the spec (§4 contracts, §7 rollout) via a **Revisions** row
-before building, or — if the code is already written — treat it as a spec gap in `/spec-verify` and
-resolve it with the user before `/pr`.
+before building, or — if the code is already written — treat it as a spec gap in `/ml-specs:spec-verify` and
+resolve it with the user before `/ml-specs:pr`.

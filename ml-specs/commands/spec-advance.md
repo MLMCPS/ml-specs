@@ -37,7 +37,7 @@ another spec.
 
 3. **Then judge the `MANUAL` gates yourself — below. Gather that evidence yourself; do not take the
    user's or another agent's word for it.** These are the ones no script can settle: whether the
-   human approved in this conversation, whether a §8 question is blocking, whether `/spec-verify`
+   human approved in this conversation, whether a §8 question is blocking, whether `/ml-specs:spec-verify`
    was clean, and whether the §6.1 suite actually ran green.
 
    For the `Verified` gate, one of those is now mechanical too — call **`verify_evidence`** on the
@@ -65,9 +65,9 @@ another spec.
 
 | Transition | Required evidence |
 |---|---|
-| `Draft` → `Approved` | The human approves **in this conversation** — ask if they haven't. Section 8 holds no blocking questions (an answer that would change an API shape, data model, error code, scope boundary, or compatibility). No `<placeholder>` text left in filled sections. If the spec hasn't had an adversarial pass, run `/spec-review` first. |
-| `Approved` → `Implemented` | Every acceptance criterion is checked, and each row of the §6 test-plan table names a test file/method that **exists on disk** — `spec-gate.mjs` checks both; a named-but-missing test is the most common lie here. Normally `/spec-build` makes this transition itself. |
-| `Implemented` → `Verified` | A clean **`/spec-verify`** — the `reviewer` agent marked every criterion satisfied, with a functional/E2E test for each user-facing or contract-level one — **and** the §6.1 full suite green end to end, **and** no new error-severity finding from the architecture standards (`ml-skills check`, if the repo has a `.mlskills.json`). If any of those did not happen in this session, run them now; if a suite or the standards check can't be run here, say so and refuse the transition. Never set `Verified` on assertion. |
+| `Draft` → `Approved` | The human approves **in this conversation** — ask if they haven't. Section 8 holds no blocking questions (an answer that would change an API shape, data model, error code, scope boundary, or compatibility). No `<placeholder>` text left in filled sections. If the spec hasn't had an adversarial pass, run `/ml-specs:spec-review` first. |
+| `Approved` → `Implemented` | Every acceptance criterion is checked, and each row of the §6 test-plan table names a test file/method that **exists on disk** — `spec-gate.mjs` checks both; a named-but-missing test is the most common lie here. Normally `/ml-specs:spec-build` makes this transition itself. |
+| `Implemented` → `Verified` | A clean **`/ml-specs:spec-verify`** — the `reviewer` agent marked every criterion satisfied, with a functional/E2E test for each user-facing or contract-level one — **and** the §6.1 full suite green end to end, **and** no new error-severity finding from the architecture standards (`ml-skills check`, if the repo has a `.mlskills.json`). If any of those did not happen in this session, run them now; if a suite or the standards check can't be run here, say so and refuse the transition. Never set `Verified` on assertion. |
 | `Verified` → `Archived` | The spec's branch is merged into the default branch — `spec-gate.mjs` checks `git branch --merged`; if the PR merged but the local branch is behind, fetch first rather than overriding it. Then `git mv` the file to `specs/archive/NNNN-slug.md` — keep the number, create `specs/archive/` if absent — and fix any relative links that pointed at it. Numbers are never reused. |
 
 **Moving backwards** (e.g. `Implemented` → `Draft` because the contract changed) is allowed and
@@ -77,5 +77,5 @@ changed and why, and it un-ticks the acceptance criteria that no longer hold.
 **Skipping a status** is not allowed — run the gates in order. If the user asks to jump straight to
 `Verified`, walk each intervening gate and report the first one that fails.
 
-Next step after a successful transition: `Approved` → `/spec-build <spec-file>` ·
-`Implemented` → `/spec-verify <spec-file>` · `Verified` → `/pr <spec-file>` · `Archived` → done.
+Next step after a successful transition: `Approved` → `/ml-specs:spec-build <spec-file>` ·
+`Implemented` → `/ml-specs:spec-verify <spec-file>` · `Verified` → `/ml-specs:pr <spec-file>` · `Archived` → done.

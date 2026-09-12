@@ -5,9 +5,9 @@ tools: Read, Grep, Glob, Bash, Write, WebFetch
 model: inherit
 ---
 
-<!-- invoked-by: batch spec authoring (see templates/specs/AGENTS.md) — deliberately NOT /spec.
-     /spec must ask the human its blocking contract questions via AskUserQuestion, and a subagent
-     has no channel to the user; routing /spec through this agent is what turned those questions
+<!-- invoked-by: batch spec authoring (see templates/specs/AGENTS.md) — deliberately NOT /ml-specs:spec.
+     /ml-specs:spec must ask the human its blocking contract questions via AskUserQuestion, and a subagent
+     has no channel to the user; routing /ml-specs:spec through this agent is what turned those questions
      into homework parked in section 8 (fixed in 0.3.0). This agent is for fanning out across
      several tickets at once, where it returns the questions to its caller. -->
 
@@ -42,7 +42,7 @@ Process:
      UUID, when a ratified standard already answers it. Cite the standard in the spec and move on.
      Every question you do not have to ask is the point of having written the standard down.
    - **A contract that violates a standard is a contract that cannot be built.** Catching it here
-     costs a sentence. Catching it in `/spec-build` costs a rewrite, and the developer agent is
+     costs a sentence. Catching it in `/ml-specs:spec-build` costs a rewrite, and the developer agent is
      then forced to choose between the spec and the standard — a decision it should never have to
      make. If what the ticket asks for genuinely conflicts with a standard, that IS a blocking
      question: put the conflict to the human with both options, not a silent pick.

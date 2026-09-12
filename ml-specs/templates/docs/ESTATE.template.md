@@ -2,7 +2,7 @@
 
 > Estate-level retrieval index for the coding agent. When a change crosses a service boundary
 > (an event, an HTTP/RPC call, a shared table), this is where the agent learns **the other side of
-> the contract** without cloning and grepping every repo. Generated and refreshed by `/repo-estate`.
+> the contract** without cloning and grepping every repo. Generated and refreshed by `/ml-specs:repo-estate`.
 >
 > Keep it under ~200 lines — it's an index, not documentation. One copy per service repo, kept in
 > sync (or hosted centrally and symlinked). Mark anything not confirmed against real code

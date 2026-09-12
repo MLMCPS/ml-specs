@@ -27,7 +27,7 @@ The template lives at `${CLAUDE_PLUGIN_ROOT}/templates/docs/ESTATE.template.md`.
 
 ## Phase 2 — learn the edges (not the peers)
 
-You are indexing contracts, not learning each service — that's `/repo-init` inside that repo. Stay
+You are indexing contracts, not learning each service — that's `/ml-specs:repo-init` inside that repo. Stay
 shallow and cheap: for each peer, the manifest for its stack, its README/`docs/ARCHITECTURE.md` for
 what it owns, and then only the files that carry an edge.
 
@@ -73,7 +73,7 @@ detail first-hand to brief the peer scanners.
     unresolved edge is where a cross-service change will break. Do NOT commit.
 
 Re-run this after adding a listener, a published topic, or a new cross-service client. Related:
-`/repo-refresh` (this repo's own docs) and `/repo-doctor` (drift check).
+`/ml-specs:repo-refresh` (this repo's own docs) and `/ml-specs:repo-doctor` (drift check).
 
-The index exists to be *used*: `/repo-impact` reads it to answer "who breaks if this ships?" — which
+The index exists to be *used*: `/ml-specs:repo-impact` reads it to answer "who breaks if this ships?" — which
 is why an unresolved edge here becomes a blind spot there, and why `_TBD_` is better than a guess.

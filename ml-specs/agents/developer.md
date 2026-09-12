@@ -69,7 +69,7 @@ Rules:
 
 9. Check off the acceptance criteria you satisfied, and set the spec's Status to `Implemented` —
    but only if every test named in the §6 test-plan table actually exists. Never set `Verified`
-   yourself: that status belongs to the VERIFY phase (`/spec-verify` → `/spec-advance`), on the
+   yourself: that status belongs to the VERIFY phase (`/ml-specs:spec-verify` → `/ml-specs:spec-advance`), on the
    evidence of an adversarial review plus a green final-acceptance run.
 10. Stay within the files your spec touches — you may be running alongside other developer
    agents working other specs. Do not refactor unrelated code.

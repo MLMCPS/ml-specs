@@ -24,7 +24,7 @@ model adds nothing:
 | `spec_trace` | Is the id chain from ticket to test case intact, for one spec or all? |
 | `spec_brief` | The approved spec packaged for whoever implements it (markdown) |
 | `nfr_check` | Which non-functional requirements do **not** route into something enforceable? |
-| `estate_survey` | What state are the neighbouring repos in, before spending `/repo-init` on them? |
+| `estate_survey` | What state are the neighbouring repos in, before spending `/ml-specs:repo-init` on them? |
 
 The last five are `scripts/` exposed. They were the half of the toolkit that most needed to be
 reachable from outside Claude Code and least was: `spec_gate` is the lifecycle gate itself, so
@@ -54,14 +54,14 @@ Templates are also served as resources under `mlspec://templates/…`.
 
 Second, the **commands**, served as MCP prompts — all 18 of them, described from their own
 frontmatter, with `$ARGUMENTS` filled in at `prompts/get`. Clients namespace these, so `spec`
-arrives as `/mcp__ml-specs__spec` rather than `/spec`; that is the client's doing, not a choice
+arrives as `/mcp__ml-specs__spec` rather than `/ml-specs:spec`; that is the client's doing, not a choice
 made here.
 
 Where a command delegates to an agent, that agent's instructions are appended to the prompt as an
 appendix, because a client with no subagent mechanism would otherwise skip the step silently — a
 command that appears to run while quietly dropping its adversarial pass is worse than one that
 fails. Inline execution loses the isolated context, tool restrictions and parallelism the plugin
-gets. `/spec-fanout` degrades most, being parallel by design.
+gets. `/ml-specs:spec-fanout` degrades most, being parallel by design.
 
 `estate_lookup` returns `present: false` with an explicit note when the repo has no estate index.
 That distinction is the whole point: "no index" is not "no consumers", and a false all-clear on a
@@ -167,7 +167,7 @@ places it's written from drifting.
 
 ## Relationship to the plugin
 
-They compose — install both. The plugin gives you the loop (`/spec` → … → `/pr`), the agents, and
+They compose — install both. The plugin gives you the loop (`/ml-specs:spec` → … → `/ml-specs:pr`), the agents, and
 the hooks; this gives every tool the same facts underneath. `knowledge_check` shares one
 implementation with the CI gate in `../templates/ci/knowledge-check.mjs`, imported rather than
 copied, so the two can't drift apart.

@@ -3,11 +3,11 @@ description: Re-learn what changed since the last refresh and update the Claude 
 argument-hint: (no args) — run from the repo root after the codebase has drifted
 ---
 
-The project has evolved since `/repo-init` (or the last refresh). Re-learn it and update the
+The project has evolved since `/ml-specs:repo-init` (or the last refresh). Re-learn it and update the
 generated knowledge files so the coding agents' memory stays accurate. The code is the source of
 truth — a stale summary is worse than none.
 
-This is the LEARN + UPDATE half of `/repo-init` (it does NOT re-scaffold `specs/` or
+This is the LEARN + UPDATE half of `/ml-specs:repo-init` (it does NOT re-scaffold `specs/` or
 `.gitattributes`). The plugin's templates live under `${CLAUDE_PLUGIN_ROOT}/templates/`.
 
 Steps:
@@ -45,8 +45,11 @@ Steps:
    - `docs/ARCHITECTURE.md` — refresh structure, data/persistence, events, external calls.
    - `CLAUDE.md` — fix the stack/build/run/test commands and the "Code patterns & conventions"
      summary if they've drifted.
+   - `docs/SKILLS.md` — do NOT rewrite it here. If the stack itself changed (a new language,
+     framework or data store), say so and recommend `/ml-specs:repo-skills`, which re-matches the catalog.
+     If the stack is unchanged, leave the file alone: the catalog moving is not repo drift.
    - `docs/ESTATE.md` — do NOT rewrite it here. If this repo's cross-service contracts changed
-     (a new client, listener, or published topic), say so and recommend `/repo-estate`, which reads
+     (a new client, listener, or published topic), say so and recommend `/ml-specs:repo-estate`, which reads
      the peer repos to resolve both sides of each edge.
    - **Sharded (large app):** update ONLY the `docs/architecture/<module>.md` (and
      `docs/patterns/<module>.md`) shards for modules that changed; add a shard + router row for a
@@ -55,4 +58,4 @@ Steps:
 5. **Report a concise changelog** of what you updated (and what you intentionally left), and what
    the human should review. Do NOT commit — leave changes staged/untracked for review.
 
-If no knowledge files exist yet, tell the user to run `/repo-init` first.
+If no knowledge files exist yet, tell the user to run `/ml-specs:repo-init` first.

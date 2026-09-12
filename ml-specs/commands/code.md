@@ -20,10 +20,10 @@ uses:
    utilities, don't add dependencies/patterns without reason.
 4. **If a contract-level decision is ambiguous** (API shape, data model, error/status codes,
    breaking change) or this clearly warrants a spec (touches an API, data model, or several
-   files), STOP and ask — or suggest `/spec` instead of guessing.
+   files), STOP and ask — or suggest `/ml-specs:spec` instead of guessing.
 5. **Test** — write/adjust tests and run the project's real test/lint/typecheck commands; report
    REAL results.
 6. Respond in the fixed format: `PLAN / FILES TO INSPECT / IMPLEMENTATION / REVIEW / TESTS`.
 
-For anything non-trivial (an API/data-model/multi-file change), prefer the spec loop: `/spec
-<ticket>` → review → `/spec-build`.
+For anything non-trivial (an API/data-model/multi-file change), prefer the spec loop: `/ml-specs:spec
+<ticket>` → review → `/ml-specs:spec-build`.

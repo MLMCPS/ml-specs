@@ -1,6 +1,6 @@
 # <project name> — code patterns & conventions
 
-> Learned from the existing codebase by `/repo-init`. This is the agent's "house style" memory:
+> Learned from the existing codebase by `/ml-specs:repo-init`. This is the agent's "house style" memory:
 > how THIS project actually writes code, so new code matches what's already there. Every pattern
 > below must cite a real example (`path/to/File.ext:line`). The code is the source of truth — if a
 > pattern here drifts from reality, fix this file.

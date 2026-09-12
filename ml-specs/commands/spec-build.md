@@ -45,17 +45,17 @@ Steps:
    it flagged as wrong in the spec. If it reports a failing suite, report the failure; never
    convert "it built" into "it works". If it surfaced a spec gap, go back to step 2.
 
-6. **Advance the spec:** `/spec-advance <spec-file> Implemented` — that command re-checks each
+6. **Advance the spec:** `/ml-specs:spec-advance <spec-file> Implemented` — that command re-checks each
    criterion's named test actually exists and records the branch, so the status is evidence-backed
    rather than self-declared.
 
 7. **Then the VERIFY phase, in this order:**
-   - `/spec-verify <spec-file>` — the `reviewer` agent judges the implementation against the
+   - `/ml-specs:spec-verify <spec-file>` — the `reviewer` agent judges the implementation against the
      spec's acceptance criteria and runs the final-acceptance suite. This is the gate for
      `Verified`; do not set that status yourself.
    - `/code-review` (and `/security-review` if auth/data exposure is involved) — these check the
      diff for bugs, a different question from "does it match the spec". Run both.
-   - `/spec-advance <spec-file> Verified` once they're clean, then `/pr <spec-file>` for the PR text.
+   - `/ml-specs:spec-advance <spec-file> Verified` once they're clean, then `/ml-specs:pr <spec-file>` for the PR text.
 
 Keep the spec in the same branch/PR as the implementation, follow the repo's branch-naming and
 commit conventions, and only commit/push when the human asks.

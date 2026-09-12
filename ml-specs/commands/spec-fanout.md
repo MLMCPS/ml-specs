@@ -25,7 +25,7 @@ anything is created:
 
 - **A repo they did not expect.** That is the query doing its job, and it is also
   the most common moment to discover the estate index is stale. If a name looks
-  wrong, run `/repo-estate` before fanning out — a stale graph reports confidently
+  wrong, run `/ml-specs:repo-estate` before fanning out — a stale graph reports confidently
   that nothing else breaks, which is worse than no graph.
 - **A repo missing that they did expect.** Same cause, opposite symptom.
 
@@ -49,7 +49,7 @@ with `SDD_SCM_TOOL=github`) — never from a file in the repo.
 
 - **`spec … is Draft; no branch is cut before the approval gate`** — correct
   behaviour, not a bug. The contract is still being negotiated. Point at
-  `/spec-advance`.
+  `/ml-specs:spec-advance`.
 - **Some repos opened, some failed.** Expected and reported, never thrown: a
   permissions error on the fourth repo must not hide that three succeeded. Report
   which failed and why. Re-running is safe for the ones that worked only if their

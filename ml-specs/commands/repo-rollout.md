@@ -8,7 +8,7 @@ Target repos: **$ARGUMENTS**
 
 You are rolling the toolkit out across many repos. The whole job is **aiming the expensive part**.
 
-`/repo-init` is the most costly operation in this toolkit — a full codebase scan. Running it across
+`/ml-specs:repo-init` is the most costly operation in this toolkit — a full codebase scan. Running it across
 an estate unattended produces a large bill and, worse, a pile of knowledge layers nobody reviewed,
 which is the exact failure the toolkit exists to prevent. So: survey cheaply, onboard deliberately,
 and let the first repo teach you what the rest need.
@@ -25,7 +25,7 @@ one's output.**
    ```
 
    It classifies each repo as **init** (no knowledge layer, active), **adopt** (has hand-written
-   docs or another tool's agent instructions — `/repo-init` would clobber them), **refresh** (already
+   docs or another tool's agent instructions — `/ml-specs:repo-init` would clobber them), **refresh** (already
    onboarded), **review** (dormant, or no recognisable manifest), or **skip**. It also counts
    cross-service edge signals.
 
@@ -35,13 +35,13 @@ one's output.**
 ## Phase 2 — agree the order with the human
 
 3. Order by **what onboarding unlocks**, not alphabetically. Repos with the most cross-service edge
-   signals come first: their `docs/ARCHITECTURE.md` is what `/repo-estate` needs to resolve the *other*
-   side of a contract, so onboarding them makes `/repo-impact` answerable for their peers too. A leaf
+   signals come first: their `docs/ARCHITECTURE.md` is what `/ml-specs:repo-estate` needs to resolve the *other*
+   side of a contract, so onboarding them makes `/ml-specs:repo-impact` answerable for their peers too. A leaf
    service with no edges can wait.
 
 4. Put the plan to the user with AskUserQuestion: which repos are in the first wave (recommend 1–3),
    and confirm the **review** ones — dormant or unrecognised repos are a human call, not yours. State
-   the rough cost: one `/repo-init` per repo, larger repos costing more.
+   the rough cost: one `/ml-specs:repo-init` per repo, larger repos costing more.
 
 ## Phase 3 — onboard, one repo at a time
 
@@ -52,8 +52,8 @@ one's output.**
    and 17 copies of the same mistake.
 
 6. For each repo in the wave, in its own directory:
-   - `action: init` → run `/repo-init`'s procedure there.
-   - `action: adopt` → run `/repo-adopt`'s procedure instead. **Never `/repo-init` a repo with existing
+   - `action: init` → run `/ml-specs:repo-init`'s procedure there.
+   - `action: adopt` → run `/ml-specs:repo-adopt`'s procedure instead. **Never `/ml-specs:repo-init` a repo with existing
      docs** — clobbering documentation a team wrote is how a tool gets banned.
    - Leave every change **uncommitted**. Report the file list per repo. The human commits.
    - If a repo turns out to be something other than a service (a library, a config repo, an
@@ -64,8 +64,8 @@ one's output.**
 
 ## Phase 4 — make the estate index real
 
-8. Once **two or more** repos are onboarded, run `/repo-estate` from one of them. Before this, the
-   contract index is mostly `_TBD_` and `/repo-impact` correctly refuses to answer; after it, both
+8. Once **two or more** repos are onboarded, run `/ml-specs:repo-estate` from one of them. Before this, the
+   contract index is mostly `_TBD_` and `/ml-specs:repo-impact` correctly refuses to answer; after it, both
    start returning real consumers. This is the payoff for the whole rollout — don't skip it because
    the individual repos "look done".
 
@@ -80,5 +80,5 @@ one's output.**
     on disk, so onboarded repos show as `refresh` and drop out of the queue. There is no ledger to
     go stale.
 
-Related: `/repo-init` (one repo, greenfield) · `/repo-adopt` (one repo, existing docs) ·
-`/repo-estate` (the contract index) · `/repo-doctor` (drift, per repo).
+Related: `/ml-specs:repo-init` (one repo, greenfield) · `/ml-specs:repo-adopt` (one repo, existing docs) ·
+`/ml-specs:repo-estate` (the contract index) · `/ml-specs:repo-doctor` (drift, per repo).

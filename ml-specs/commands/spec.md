@@ -35,7 +35,7 @@ Steps:
 4. Copy `specs/TEMPLATE.md` and fill every section, using the answers from step 3. Make acceptance
    criteria concrete and testable (Given/When/Then), and map each AC to a planned test for this
    project's stack. (If `specs/` or `specs/TEMPLATE.md` is missing, the repo hasn't been set up —
-   tell the user to run `/repo-init` first, or fall back to the plugin template at
+   tell the user to run `/ml-specs:repo-init` first, or fall back to the plugin template at
    `${CLAUDE_PLUGIN_ROOT}/templates/specs/TEMPLATE.md`.)
 
 5. **Actually create the file** — use the Write tool to save it as `specs/NNNN-<slug>.md`,
@@ -62,8 +62,8 @@ Steps:
 
 7. Summarize for the user: the spec path, the contract decisions taken, cross-module impact, and
    what the reviewer flagged and you fixed. Then **ask them to review/approve.** On their approval,
-   record it with `/spec-advance specs/NNNN-<slug>.md Approved`; the next step after that is
-   `/spec-build specs/NNNN-<slug>.md`. Leave the Status at `Draft` yourself — you don't approve
+   record it with `/ml-specs:spec-advance specs/NNNN-<slug>.md Approved`; the next step after that is
+   `/ml-specs:spec-build specs/NNNN-<slug>.md`. Leave the Status at `Draft` yourself — you don't approve
    your own spec.
 
 **If the user sends the spec back for changes:** update the file, add a row to its **Revisions**

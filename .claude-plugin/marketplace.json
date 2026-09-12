@@ -7,8 +7,8 @@
   "plugins": [
     {
       "name": "ml-specs",
-      "description": "Spec-driven development for any stack (Java/Spring, React, Node/Express, NestJS; MySQL/PostgreSQL/MongoDB): a stack-aware coding agent + spec author/developer/reviewer/pr-author agents, and the evidence-gated loop /spec, /spec-review, /spec-build, /spec-verify, /spec-advance, /spec-fanout, /pr, plus /code, /fix, /nfr and the knowledge layer /repo-init, /repo-rollout, /repo-adopt, /repo-estate, /repo-impact, /repo-refresh, /repo-doctor, /repo-status.",
-      "version": "1.0.0",
+      "description": "Spec-driven development for any stack (Java/Spring, React, Node/Express, NestJS; MySQL/PostgreSQL/MongoDB): a stack-aware coding agent + spec author/developer/reviewer/pr-author agents, and the evidence-gated loop /ml-specs:spec, /ml-specs:spec-review, /ml-specs:spec-build, /ml-specs:spec-verify, /ml-specs:spec-advance, /ml-specs:spec-fanout, /ml-specs:pr, plus /ml-specs:code, /ml-specs:fix, /ml-specs:nfr and the knowledge layer /ml-specs:repo-init, /ml-specs:repo-rollout, /ml-specs:repo-adopt, /ml-specs:repo-skills, /ml-specs:repo-estate, /ml-specs:repo-impact, /ml-specs:repo-refresh, /ml-specs:repo-doctor, /ml-specs:repo-status.",
+      "version": "1.1.0",
       "source": "./ml-specs"
     }
   ]

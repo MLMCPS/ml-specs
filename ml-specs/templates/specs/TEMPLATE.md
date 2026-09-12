@@ -6,11 +6,11 @@
 | **Project / service** | <repo or service name> |
 | **Stack** | <e.g. Java/Spring, React, Node/Express, NestJS — fill from the repo> |
 | **Status** | Draft \| Approved \| Implemented \| Verified \| Archived |
-| **Branch** | <branch this is built on — set by `/spec-advance`; `—` until work starts> |
+| **Branch** | <branch this is built on — set by `/ml-specs:spec-advance`; `—` until work starts> |
 | **Author** | <name> |
 | **Date** | YYYY-MM-DD |
 
-> Status is written by `/spec-advance`, which checks the evidence each transition requires
+> Status is written by `/ml-specs:spec-advance`, which checks the evidence each transition requires
 > (see `specs/README.md`). Don't hand-edit it — a status nobody checked is worth nothing.
 
 ## Revisions

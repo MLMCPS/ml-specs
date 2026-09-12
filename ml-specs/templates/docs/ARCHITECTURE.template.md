@@ -102,7 +102,7 @@ change that ripples across modules misses the other side. So:
 | | | | `file:line` |
 
 ## Keeping this fresh
-Regenerate (or `/repo-refresh`) after changes to routes/endpoints/controllers, the data model or
+Regenerate (or `/ml-specs:repo-refresh`) after changes to routes/endpoints/controllers, the data model or
 migrations, event listeners, or external clients. Refresh only the shard(s) that changed — not the
 whole set. Use the project's own search (the right grep/glob for the stack), e.g. controllers/route
 definitions, `@SqsListener`/queue consumers, ORM model & migration dirs, external-client/proxy

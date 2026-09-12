@@ -6,6 +6,41 @@ All notable changes to this plugin. Bump `version` in `.claude-plugin/plugin.jso
 
 Entries before 1.0.0 refer to this plugin under its former name, `sdd-toolkit`.
 
+## [1.1.0]
+
+### Added
+- **A `security-reviewer` agent, wired into `/ml-specs:spec-verify`.** Verification used to ask one
+  question — does this match the spec — and a change that matched its spec perfectly could still
+  ship an injection or a leaked credential. Security was left to whoever remembered to ask for it,
+  which meant it happened on the changes least likely to need it and got skipped on the ones that
+  did. The agent runs as a standing part of the verify pipeline instead of on request, with its own
+  severities and verdicts, and it is read-only: it reports what it finds and cannot "fix" it.
+
+- **`/ml-specs:repo-skills`**, which maps a repo's actual stack onto the `ml-skills` catalogue and
+  writes `docs/SKILLS.md`. Adopting architecture standards previously meant reading the catalogue
+  and guessing which of them applied to your codebase. The command inspects what is really there —
+  language, framework, database, CI — and proposes the subset that matches, so the standards a repo
+  adopts are the ones it can actually violate.
+
+### Fixed
+- **Every slash-command reference in the shipped documentation was written in a form that does not
+  work.** Commands are invocable only as `/ml-specs:<name>`, but all 573 references across the
+  plugin's commands, agents, README, CHANGELOG and templates named them bare — `/spec-advance`
+  rather than `/ml-specs:spec-advance`. Anyone copy-pasting the "next command in the loop" line that
+  every command ends with got `Unknown command`. Both manifest `description` strings had the same
+  defect, so the marketplace listing and `/plugin` taught the broken form too.
+
+  This mattered most in `templates/`, which `/ml-specs:repo-init` and `/ml-specs:repo-adopt` write
+  into every adopted repo — the defect reproduced itself into each new consumer. All of them now
+  carry the namespaced form, so a newly adopted repo gets instructions that run.
+
+  Existing adopted repos keep their stale references until they are re-run through
+  `/ml-specs:repo-refresh` or `/ml-specs:repo-adopt`; there is no automatic migration.
+
+  A validator check in this repo now fails the build on any bare reference that reappears, with a
+  per-file `<!-- allow-bare-commands -->` escape for documents that quote the broken form
+  deliberately. That guard is marketplace-side tooling and is not part of the published package.
+
 ## [1.0.0]
 
 **Breaking.** The plugin is renamed and eight commands change name with it. Existing installs will
@@ -21,7 +56,7 @@ not upgrade in place — see *Migrating* at the end of this entry.
 
 - **The eight knowledge-layer commands are now `/repo-*`.** `/sdd-init`, `/sdd-refresh`,
   `/sdd-doctor`, `/sdd-adopt`, `/sdd-estate`, `/sdd-impact`, `/sdd-rollout` and `/sdd-status`
-  become `/repo-init`, `/repo-refresh`, and so on. None of them was ever about specs — they learn,
+  become `/ml-specs:repo-init`, `/ml-specs:repo-refresh`, and so on. None of them was ever about specs — they learn,
   refresh and audit the repo's knowledge layer, and the `sdd-` prefix said only which plugin they
   came from, which the client already namespaces. The surface now splits along what it does:
   **`/spec-*` is the loop, `/repo-*` is the knowledge layer.** The loop commands are unchanged.
@@ -44,17 +79,17 @@ not upgrade in place — see *Migrating* at the end of this entry.
 
   | Phase | Tool | What it replaced |
   |---|---|---|
-  | `/spec` | `spec_standards` | hand-picking standards per §4.x |
-  | `/spec`, `/spec-review` | `spec_precheck` | nothing — there was no pre-code check |
-  | `/spec-verify`, `/spec-advance` | `verify_evidence` | interpreting `check_repo` by hand |
-  | `/nfr` | `gate_manifest` | drafting a rule and hoping it fires |
+  | `/ml-specs:spec` | `spec_standards` | hand-picking standards per §4.x |
+  | `/ml-specs:spec`, `/ml-specs:spec-review` | `spec_precheck` | nothing — there was no pre-code check |
+  | `/ml-specs:spec-verify`, `/ml-specs:spec-advance` | `verify_evidence` | interpreting `check_repo` by hand |
+  | `/ml-specs:nfr` | `gate_manifest` | drafting a rule and hoping it fires |
 
   `spec_precheck` is the one with no predecessor. It runs the real checkers over the fenced blocks
   in a **draft spec** and reports findings at the spec's own line numbers, so a versioning, money-
   type or idempotency mistake is caught while it still costs one edit. Sections with no fenced
   contract are reported as **not checked** rather than folded into a clean result.
 
-- **`verify_evidence` gives the `Verified` gate four verdicts, not two.** `/spec-advance` already
+- **`verify_evidence` gives the `Verified` gate four verdicts, not two.** `/ml-specs:spec-advance` already
   said in prose that "`Verified` against a gate nothing could fail is a weaker claim than it
   looks"; that judgement is now a field. `inconclusive` — clean, but no standard in scope was
   ratified, so nothing *could* have failed — is reported as the absence of evidence rather than
@@ -75,7 +110,7 @@ not upgrade in place — see *Migrating* at the end of this entry.
 
 ### Fixed
 
-- **`/spec-fanout` gave a false all-clear when the estate index was missing.** A repo with no
+- **`/ml-specs:spec-fanout` gave a false all-clear when the estate index was missing.** A repo with no
   `docs/ESTATE.md` reported no affected consumers, which is indistinguishable from "there are
   none" and is the more dangerous of the two answers.
 - **`/spec-brief` refused a Draft spec but not one with no acceptance criteria**, so the emptier
@@ -108,11 +143,11 @@ find-and-replace.
 - **The MCP server now serves the plugin's commands as prompts**, so a client outside Claude Code
   gets the workflow and not just the lookups. Until now `@mlmcps/sdd-mcp` exposed four read-only
   tools and nothing else: someone wiring it into Cursor or a custom agent could ask *what specs
-  exist* but had no `/spec`, `/spec-build` or `/code` to act on the answer. The commands were
+  exist* but had no `/ml-specs:spec`, `/ml-specs:spec-build` or `/ml-specs:code` to act on the answer. The commands were
   already the shape of an MCP prompt — frontmatter over a body with an `$ARGUMENTS` placeholder —
   so they are served as one. All 18 arrive, described from their own frontmatter.
 
-  Clients namespace MCP prompts, so `spec` shows up as `/mcp__sdd-toolkit__spec`, not `/spec`.
+  Clients namespace MCP prompts, so `spec` shows up as `/mcp__sdd-toolkit__spec`, not `/ml-specs:spec`.
   That is the client's doing and cannot be opted out of.
 
 - **Agents a command delegates to are inlined into the prompt.** Several commands hand real work
@@ -120,7 +155,7 @@ find-and-replace.
   nothing, which is the worst failure available here: the command appears to run and quietly skips
   its adversarial pass. Any agent a command names in bold now has its instructions appended to the
   prompt under a heading that says why. The client follows them inline, losing the isolated
-  context, tool restrictions and parallelism the plugin gets. `/spec-fanout` degrades most, being
+  context, tool restrictions and parallelism the plugin gets. `/ml-specs:spec-fanout` degrades most, being
   parallel by design.
 
   Matching the bolded name in the command's prose, rather than adding a machine-readable field,
@@ -139,7 +174,7 @@ find-and-replace.
 ## [0.20.1]
 
 ### Fixed
-- **`/nfr` and `/spec-fanout` were missing from the plugin's own description**, so the two commands
+- **`/ml-specs:nfr` and `/ml-specs:spec-fanout` were missing from the plugin's own description**, so the two commands
   0.20.0 added shipped invisible: the description is the command list a user sees in the marketplace
   and in `/plugin`, and neither new command appeared in it. They worked perfectly for anyone who
   already knew they existed, which is not how anyone finds a command.
@@ -170,7 +205,7 @@ find-and-replace.
   `Ticket` typed into a spec's header table cannot be checked from inside the repo; counting it as
   passing would make the whole report a lie, so it is named as unchecked instead.
 
-- **`/nfr` — non-functional requirements stop vanishing.** NFRs are the requirements most likely to
+- **`/ml-specs:nfr` — non-functional requirements stop vanishing.** NFRs are the requirements most likely to
   be agreed and then lost, because they do not decompose into user stories: a story breakdown
   flattens "the API shall be performant" into prose that nothing checks, and nobody notices until
   the load test that was never written would have caught it. This compiles each NFR into the two
@@ -182,7 +217,7 @@ find-and-replace.
   The constraints it writes are carried into the next spec automatically, so a rule agreed in
   August is in front of whoever writes a spec in November without anyone remembering it exists.
 
-- **`/spec-fanout` — a change spanning four services is one change, provably.** Today that is four
+- **`/ml-specs:spec-fanout` — a change spanning four services is one change, provably.** Today that is four
   pull requests a reviewer correlates by hand and hopes they got right. Every branch in a fan-out
   now carries the same derived name, and `docs/ESTATE.md` supplies the consumers — including the
   service one hop out that nobody remembered. Plans first, then `--dry-run` prints the exact
@@ -283,7 +318,7 @@ running the expensive parts concurrently.
   `file:line` citations and never file contents**. `/sdd-init` fans out three briefs (stack,
   structure, patterns); `/sdd-estate` fans out one per peer repo, so N peers cost roughly one peer's
   wall-clock instead of N.
-- **`scripts/spec-gate.mjs` — the mechanical half of a `/spec-advance` gate, checked exactly.**
+- **`scripts/spec-gate.mjs` — the mechanical half of a `/ml-specs:spec-advance` gate, checked exactly.**
   Lifecycle ordering, leftover `<placeholder>` text, whether every acceptance criterion is ticked,
   whether **every test file named in the §6 table exists on disk**, and whether the recorded branch
   is merged. That work was being done by a model re-reading the spec and globbing — slow, paid for
@@ -307,10 +342,10 @@ running the expensive parts concurrently.
   the `coder` agent already carries in full and only needs when it actually runs. What stayed,
   verbatim: the no-AI-attribution policy and the knowledge-layer retrieval order, which is the part
   that pays for itself by keeping later reads small.
-- **Model routing on the mechanical commands.** `/spec-advance`, `/sdd-impact`, `/sdd-estate` and
+- **Model routing on the mechanical commands.** `/ml-specs:spec-advance`, `/sdd-impact`, `/sdd-estate` and
   `/sdd-rollout` now run on Sonnet — checking a fixed gate table, classifying a diff against a fixed
   taxonomy, filling a template, and summarizing a script's output are not Opus-shaped work.
-  `/spec-review`, `/spec-verify` and both reviewer agents deliberately stay on the inherited model:
+  `/ml-specs:spec-review`, `/ml-specs:spec-verify` and both reviewer agents deliberately stay on the inherited model:
   adversarial review is exactly what the larger model is for, and cheapening it would trade the
   toolkit's main guarantee for a small saving.
 - **Agent and command descriptions trimmed to what routing actually needs** (~1,390 → ~1,260 tokens
@@ -389,11 +424,11 @@ running the expensive parts concurrently.
   its relative links along with the other docs.
 
 ### Changed
-- **No AI attribution in commits or PRs.** The `pr-author` agent, `/pr`, `/fix`, `/spec-build`, and
+- **No AI attribution in commits or PRs.** The `pr-author` agent, `/ml-specs:pr`, `/ml-specs:fix`, `/ml-specs:spec-build`, and
   the `CLAUDE.fragment.md` template now all state that commit messages, trailers, PR titles, and PR
   bodies name the humans who own the change and nothing else — no assistant `Co-Authored-By:` line,
   no "Generated with" line, no model or vendor name, no badge or emoji. The fragment and
-  `/spec-build` also spell out why a stray trailer is not a local problem: a squash merge
+  `/ml-specs:spec-build` also spell out why a stray trailer is not a local problem: a squash merge
   aggregates trailers from **every** commit on the branch, so one line added early resurfaces on
   the merge commit long after, attributed to a tool rather than to the people who own the work.
 - **Releases no longer cut a GitHub Release** (`release.yml`). Every Release carries
@@ -515,15 +550,15 @@ running the expensive parts concurrently.
 ## [0.10.0]
 
 ### Added
-- **`/fix <bug>`** — bugs had no home. `/spec` is built for features (it asks what the contract
+- **`/ml-specs:fix <bug>`** — bugs had no home. `/ml-specs:spec` is built for features (it asks what the contract
   *should* be), but a defect already has a contract and the code is just violating it, so a
-  feature-shaped spec is wasted ceremony. Bugs were therefore falling through to `/code`, which
-  applies no discipline at all. `/fix` is the middle path, and its discipline is a single rule:
+  feature-shaped spec is wasted ceremony. Bugs were therefore falling through to `/ml-specs:code`, which
+  applies no discipline at all. `/ml-specs:fix` is the middle path, and its discipline is a single rule:
   **reproduce it with a test that fails, and show the failure, before changing anything.** A fix
   without a test that failed first is a guess, and nothing stops the bug returning. Then: root cause
   stated in one sentence with `file:line` (and an explicit admission when the symptom is suppressed
   rather than understood), the smallest change that turns it green, real verification output, and a
-  search for the same defect in sibling code paths. Escalates to `/spec` when the fix would change a
+  search for the same defect in sibling code paths. Escalates to `/ml-specs:spec` when the fix would change a
   contract — at that point it isn't a bugfix, it's a change of intent.
 
 ### Fixed
@@ -568,7 +603,7 @@ running the expensive parts concurrently.
 
 ### Added
 - **`scripts/fix-specs.mjs`** — repairs the two spec-hygiene problems that accumulate in a repo
-  that adopted `specs/` before the newer commands existed. 0.6.0 stopped `/spec` from *creating*
+  that adopted `specs/` before the newer commands existed. 0.6.0 stopped `/ml-specs:spec` from *creating*
   duplicate numbers but did nothing about ones already on disk, and the evidence-gated `Status`
   from 0.4.0 assumes a one-word value that older specs don't have.
   - **Duplicate numbers** — keeps the earliest-added file on the number and renumbers the rest to
@@ -636,10 +671,10 @@ running the expensive parts concurrently.
   contracts (event payloads, API request/response shapes, shared tables, exported types), resolves
   consumers from `docs/ESTATE.md`, classifies each as additive / compatible-with-sequence /
   breaking, and produces a deploy order that's safe at every intermediate step. Nothing else in the
-  loop looks outside this repo — tests, `/code-review`, and `/spec-verify` all pass cleanly on a
+  loop looks outside this repo — tests, `/code-review`, and `/ml-specs:spec-verify` all pass cleanly on a
   change that breaks a consumer. If the estate index is missing or mostly `_TBD_`, it **refuses to
   answer** rather than reporting "no consumers affected": that false all-clear is worse than no
-  answer, because it gets believed. Wired into `/spec-verify` for contract-touching changes.
+  answer, because it gets believed. Wired into `/ml-specs:spec-verify` for contract-touching changes.
 - **`/sdd-adopt`** — `/sdd-init` assumes a blank slate, which is wrong for most repos that already
   have a hand-written `CLAUDE.md`, `docs/`, or an RFC/ADR practice, and clobbering documentation a
   team wrote is the fastest way to make them distrust the tool. This classifies every existing
@@ -649,7 +684,7 @@ running the expensive parts concurrently.
   `/sdd-init` now detects an existing knowledge layer and redirects here.
 
 ### Fixed
-- **Spec numbers collided across branches.** `/spec` picked the next number from the working tree,
+- **Spec numbers collided across branches.** `/ml-specs:spec` picked the next number from the working tree,
   so two people speccing in parallel both got `0007-` and found out at merge — as a conflict in a
   *filename*, which git resolves badly. It now takes the max across every branch
   (`git log --all --diff-filter=A -- 'specs/[0-9]*'`) unioned with `specs/` and `specs/archive/`,
@@ -686,7 +721,7 @@ running the expensive parts concurrently.
   manifests that CI requires to match, and validates. Stops before committing.
 
 ### Changed
-- **`/spec-build` now actually spawns `sdd-developer`.** It ran at 26% of skill usage while the
+- **`/ml-specs:spec-build` now actually spawns `sdd-developer`.** It ran at 26% of skill usage while the
   agent ran at ~1% — the command was reimplementing the agent's job inline, so the agent's
   guarantees (test per criterion, functional/E2E for user-facing ones, real results only) silently
   didn't apply, and the parallel three-worktree pattern in `specs/AGENTS.md` couldn't happen at all.
@@ -696,7 +731,7 @@ running the expensive parts concurrently.
   agents impossible. A *mention* no longer counts as an invocation: it matches the idiom
   `Use the **agent-name** agent`, because describing an agent in backticks is exactly how
   `sdd-reviewer` and `pr-author` looked wired while nothing ran them. An agent with no command must
-  declare why with an `<!-- invoked-by: … -->` comment (`sdd-spec-author` does — `/spec` must ask the
+  declare why with an `<!-- invoked-by: … -->` comment (`sdd-spec-author` does — `/ml-specs:spec` must ask the
   human its contract questions, which a subagent can't). Also added: `${CLAUDE_PLUGIN_ROOT}/…` paths
   resolve, `hooks.json` scripts exist **and are executable** (a non-executable hook fails silently),
   `skills/<name>/SKILL.md` frontmatter matches its directory, and relative README links resolve.
@@ -704,24 +739,24 @@ running the expensive parts concurrently.
 ## [0.4.0]
 
 ### Added
-- **`/spec-verify <spec-file>` — the VERIFY phase finally has an entry point.** The `sdd-reviewer`
-  agent had shipped since 0.1.0 with *nothing* invoking it: `/spec-build` sent users to the built-in
+- **`/ml-specs:spec-verify <spec-file>` — the VERIFY phase finally has an entry point.** The `sdd-reviewer`
+  agent had shipped since 0.1.0 with *nothing* invoking it: `/ml-specs:spec-build` sent users to the built-in
   `/code-review` instead, which reviews the diff for bugs and never opens the spec. The gate the
   toolkit advertised — "test per criterion + adversarial review" — was reachable only if the model
-  happened to route to the agent on its own. `/spec-verify` delegates to it, relays the
+  happened to route to the agent on its own. `/ml-specs:spec-verify` delegates to it, relays the
   per-criterion verdict and the real final-acceptance output unsoftened, and splits must-fixes into
   *code is wrong* (fix and re-run) vs *spec is wrong* (a contract change → back through
   AskUserQuestion, never a quiet widening of the spec to match what was built). Both reviews are now
   prescribed, with a table saying which question each one answers.
-- **`/pr <spec-file>`** — same orphan problem: `pr-author` existed with no command. Defaults to the
+- **`/ml-specs:pr <spec-file>`** — same orphan problem: `pr-author` existed with no command. Defaults to the
   spec matching the current branch, flags a not-yet-`Verified` spec up front, produces text only,
   and opens the PR only on an explicit ask (via `--body-file`, never a retyped body).
-- **`/spec-advance <spec-file> [status]` — spec status becomes evidence-backed.** Status was written
+- **`/ml-specs:spec-advance <spec-file> [status]` — spec status becomes evidence-backed.** Status was written
   ad hoc by whichever agent felt done, so `Verified` meant "an agent said so". It is now written
   *only* here, and each transition must show its evidence: `Approved` needs the human's approval in
   conversation and no blocking question parked in §8; `Implemented` needs every test named in the §6
   table to **exist on disk** (a named-but-missing test being the usual lie); `Verified` needs a clean
-  `/spec-verify` *and* a green §6.1 suite, never an assertion; `Archived` needs the branch merged,
+  `/ml-specs:spec-verify` *and* a green §6.1 suite, never an assertion; `Archived` needs the branch merged,
   then `git mv`s the spec to `specs/archive/` keeping its number. Missing evidence means the
   transition is **refused**, which is a successful run. Backwards moves are allowed but must add a
   Revisions row. The command also records the spec's **Branch**, so `/sdd-status` reads it instead of
@@ -739,13 +774,13 @@ running the expensive parts concurrently.
   and queues, which `/sdd-init` would then copy verbatim into unrelated repos. Now placeholders,
   plus an evidence column and an optional shared-data table.
 - Spec template: `Branch` row and the `Archived` status; a note that Status is written by
-  `/spec-advance`, not by hand.
+  `/ml-specs:spec-advance`, not by hand.
 - `specs/README.md` gained a **Lifecycle** table (status → meaning → gate), and the loop's VERIFY
-  step now names `/spec-verify` and `/pr`. `specs/AGENTS.md` maps each agent to the command that
+  step now names `/ml-specs:spec-verify` and `/ml-specs:pr`. `specs/AGENTS.md` maps each agent to the command that
   runs it — the mapping whose absence hid the two orphans.
-- `/spec-build` now hands off through `/spec-advance Implemented` → `/spec-verify` → `/code-review`
-  → `/spec-advance Verified` → `/pr` instead of ending at "recommend `/code-review`". `/spec` and
-  `/spec-review` no longer touch Status (an author doesn't approve their own spec).
+- `/ml-specs:spec-build` now hands off through `/ml-specs:spec-advance Implemented` → `/ml-specs:spec-verify` → `/code-review`
+  → `/ml-specs:spec-advance Verified` → `/ml-specs:pr` instead of ending at "recommend `/code-review`". `/ml-specs:spec` and
+  `/ml-specs:spec-review` no longer touch Status (an author doesn't approve their own spec).
 - `/sdd-status` reads the spec's `Branch` row (marking fallback guesses with `?`), collapses
   `specs/archive/` to a count, and flags merged-but-unarchived specs. `/sdd-doctor` now flags
   `Verified` specs whose named tests don't exist and blocking questions parked in §8.
@@ -757,27 +792,27 @@ running the expensive parts concurrently.
 ### Added
 - **One-pass spec review.** Human review of a spec was looping: read → find holes → answer →
   re-read. Three causes, all fixed:
-  - `/spec` and `sdd-spec-author` gave **opposite instructions** on the same trigger — the command
+  - `/ml-specs:spec` and `sdd-spec-author` gave **opposite instructions** on the same trigger — the command
     said ask the user before writing; the agent said park the questions in the document. The agent
     won whenever the model routed to it, so blocking contract decisions reached the human as
     homework. Both now resolve blocking ambiguity *before* the spec is written, with one definition
     of blocking (the answer changes an API shape, data model, error code, scope boundary, or
-    compatibility — i.e. you'd rewrite a section knowing it). `/spec` asks the batch directly via
+    compatibility — i.e. you'd rewrite a section knowing it). `/ml-specs:spec` asks the batch directly via
     AskUserQuestion, each question carrying concrete options and a recommendation; `sdd-spec-author`
     is a subagent with no user channel, so it stops and returns the questions to its caller instead.
     Section 8 is now non-blocking follow-ups **only**, and the template says so.
-  - **`/spec` never routed through `/spec-review`** — it sent the user straight from draft to
-    approve to `/spec-build`, making the human the first reviewer. `/spec` now runs the adversarial
+  - **`/ml-specs:spec` never routed through `/ml-specs:spec-review`** — it sent the user straight from draft to
+    approve to `/ml-specs:spec-build`, making the human the first reviewer. `/ml-specs:spec` now runs the adversarial
     pass over its own draft and fixes what it finds before the human sees anything.
   - **Revisions had no bounded surface** — a sent-back spec cost a full re-read. `TEMPLATE.md` now
     carries a `Revisions` table (what changed, why, which sections) so round two is a diff read.
 - `sdd-spec-reviewer` agent — the adversarial spec pass as a reusable unit with **fresh context**
-  (a spec's author cannot see its own holes). `/spec-review` is now a thin delegator to it, and
-  `/spec` spawns it automatically. Also flags blocking questions parked in section 8 as blockers.
+  (a spec's author cannot see its own holes). `/ml-specs:spec-review` is now a thin delegator to it, and
+  `/ml-specs:spec` spawns it automatically. Also flags blocking questions parked in section 8 as blockers.
 - **Per-component model tiering (quality-first).** Everything that affects code quality stays on
-  the inherited (Opus) model: the code-writing agents (`coder`, `sdd-developer`, `/spec-build`),
-  the spec author (`sdd-spec-author`, `/spec`), and both quality gates (`sdd-reviewer`,
-  `/spec-review`). Only work with **no** bearing on code correctness runs cheaper via frontmatter:
+  the inherited (Opus) model: the code-writing agents (`coder`, `sdd-developer`, `/ml-specs:spec-build`),
+  the spec author (`sdd-spec-author`, `/ml-specs:spec`), and both quality gates (`sdd-reviewer`,
+  `/ml-specs:spec-review`). Only work with **no** bearing on code correctness runs cheaper via frontmatter:
   `pr-author` (PR prose) → **sonnet**; `/sdd-doctor`, `/sdd-status` (mechanical read-only
   dashboards) → **haiku**. `spec-build`/`sdd-developer` run only the targeted tests during
   implementation and the full functional/E2E suite **once** at the final-acceptance step (cheaper,
@@ -786,9 +821,9 @@ running the expensive parts concurrently.
   test type and a `## 6.1 Final acceptance` section, and a `Verified` status. Every user-facing /
   contract-level acceptance criterion needs a functional/E2E test (not just a unit test), and a
   spec is only `Verified` once the project's *full* suite (incl. functional/E2E) passes end to
-  end. Threaded through `/spec-build`, the `sdd-developer` and `sdd-reviewer` agents,
+  end. Threaded through `/ml-specs:spec-build`, the `sdd-developer` and `sdd-reviewer` agents,
   `specs/README.md`, the CLAUDE.md fragment, and `docs/PATTERNS.md`.
-- `/spec-review <spec-file>` — adversarial review of a spec **before** any code: checks contracts,
+- `/ml-specs:spec-review <spec-file>` — adversarial review of a spec **before** any code: checks contracts,
   acceptance criteria, and cross-module ripple are complete and testable.
 - `/sdd-doctor` — read-only health check of the knowledge layer (broken `file:line` refs, stale
   commands, over-budget docs, `(inferred)` markers, spec hygiene); recommends `/sdd-refresh`.
@@ -819,7 +854,7 @@ running the expensive parts concurrently.
   `docs/PATTERNS.md` (where project detail belongs), not in always-loaded agent prompts.
 - Added a confidence convention to `PATTERNS.template.md` — mark `(inferred)` patterns so the agent
   re-checks them against code; never invent a convention to fill a section.
-- Clarified `/code` vs `/spec` boundary and noted `/code-review`/`/security-review` are built-in.
+- Clarified `/ml-specs:code` vs `/ml-specs:spec` boundary and noted `/code-review`/`/security-review` are built-in.
 
 ### Fixed
 - Duplicate step number in `/sdd-init`; a Spring-specific `Feign` reference in the stack-neutral
@@ -828,7 +863,7 @@ running the expensive parts concurrently.
 ## [0.2.0]
 
 ### Added
-- `/code <task>` — one-shot coding command via the `coder` agent.
+- `/ml-specs:code <task>` — one-shot coding command via the `coder` agent.
 - `/sdd-refresh` — re-learn the project and update the knowledge files after the code drifts.
 - `docs/PATTERNS.md` — learned "house style" memory, generated by `/sdd-init` and read by all agents.
 - Optional `templates/hooks/settings.hooks.example.json` — opt-in post-edit/lint/test/secret hooks.
@@ -857,4 +892,4 @@ running the expensive parts concurrently.
 
 ## [0.1.0]
 - Initial release: `coder` + `sdd-spec-author`/`sdd-developer`/`sdd-reviewer` agents,
-  `/spec`, `/spec-build`, `/sdd-init`, and the spec/docs templates (publisher-service focused).
+  `/ml-specs:spec`, `/ml-specs:spec-build`, `/sdd-init`, and the spec/docs templates (publisher-service focused).

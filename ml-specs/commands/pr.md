@@ -13,7 +13,7 @@ than guessing.
 Use the **pr-author** agent to produce the PR title and body from the spec plus the branch diff.
 
 Before delegating, check the spec's Status and say so up front if the work isn't verified yet — a
-PR from an `Implemented` spec is fine, but the human should know `/spec-verify` hasn't passed.
+PR from an `Implemented` spec is fine, but the human should know `/ml-specs:spec-verify` hasn't passed.
 
 Relay the agent's output **ready to paste**: the title, then the body (`## Summary`,
 `## Changes`, `## Acceptance criteria` as a checklist mapped to tests, `## Testing` with the real
@@ -29,4 +29,4 @@ Hard rules:
   "Generated with"/"Made with" line, no model or vendor name, no tool badge or emoji. If the user
   asks you to open the PR, pass the body through unchanged — don't let `gh` or a template append one.
 
-Next step: `/spec-advance <spec-file> Archived` once the PR is merged.
+Next step: `/ml-specs:spec-advance <spec-file> Archived` once the PR is merged.
