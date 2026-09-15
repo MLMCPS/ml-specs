@@ -6,7 +6,9 @@
 // Two harnesses, both proven in `plugin-wiring.test.mjs`: the real validator over the real tree
 // (the only thing that can prove the 573-edit rewrite landed), and a copy of the validator dropped
 // into a tmp fixture for everything that needs a different ROOT — the script pins ROOT to its own
-// location on disk, with no --root and no cwd.
+// location on disk, with no --root and no cwd. The copy must carry the validator's one local
+// import (`ml-specs/scripts/lib/file-identity.mjs`) at the same relative path, or the fixture
+// process dies on ERR_MODULE_NOT_FOUND before any check runs.
 //
 // The fixture harness ships NO manifests, deliberately: supplying them half-built hard-errors in
 // checks 1-5 before control reaches the check under test. The consequence is that checks 1-5 ALWAYS
@@ -24,6 +26,7 @@ import { fileURLToPath } from 'node:url';
 const PLUGIN = dirname(dirname(fileURLToPath(import.meta.url)));  // ml-specs/
 const ROOT = dirname(PLUGIN);                                     // repo root
 const VALIDATOR = join(ROOT, 'scripts', 'validate-plugin.mjs');
+const VALIDATOR_LIB = join('ml-specs', 'scripts', 'lib', 'file-identity.mjs');
 
 const readRoot = (rel) => readFileSync(join(ROOT, rel), 'utf8');
 
@@ -44,8 +47,9 @@ const FIXTURE_COMMANDS = ['spec', 'spec-review', 'spec-build', 'spec-verify', 's
 
 /**
  * Build a throwaway tree containing a copy of the validator, `ml-specs/commands/` stubs (check 12
- * derives its command list from them), plus `files`, and run it. One file is enough to copy: the
- * validator imports only node:fs / node:path / node:url.
+ * derives its command list from them), plus `files`, and run it. Two files are enough to copy: the
+ * validator, and its only non-stdlib import is `ml-specs/scripts/lib/file-identity.mjs`, which comes
+ * along at the same relative path.
  */
 function runFixture(files, commands = FIXTURE_COMMANDS) {
   const dir = mkdtempSync(join(tmpdir(), 'ml-specs-ns-'));
@@ -53,6 +57,8 @@ function runFixture(files, commands = FIXTURE_COMMANDS) {
     mkdirSync(join(dir, 'scripts'), { recursive: true });
     mkdirSync(join(dir, 'ml-specs', 'commands'), { recursive: true });
     copyFileSync(VALIDATOR, join(dir, 'scripts', 'validate-plugin.mjs'));
+    mkdirSync(dirname(join(dir, VALIDATOR_LIB)), { recursive: true });
+    copyFileSync(join(ROOT, VALIDATOR_LIB), join(dir, VALIDATOR_LIB));
     for (const name of commands) {
       writeFileSync(join(dir, 'ml-specs', 'commands', `${name}.md`),
         '---\ndescription: fixture\n---\n\nFixture body; names no command.\n');

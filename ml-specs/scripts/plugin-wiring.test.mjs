@@ -184,8 +184,9 @@ describe('the repo validator knows the new agent', () => {
     // and omits its file.
     //
     // The validator pins ROOT to its own location on disk, so the only way to point
-    // it at another tree is to copy it there. One file is enough: it imports only
-    // node:fs / node:path / node:url.
+    // it at another tree is to copy it there. Two files: the validator, and its only
+    // non-stdlib import, `ml-specs/scripts/lib/file-identity.mjs`, which must land at
+    // the same relative path or the fixture process dies on ERR_MODULE_NOT_FOUND.
     //
     // Deliberately NO manifests. Supplying them half-built is the trap — a
     // description that does not enumerate every command in the fixture hard-errors
@@ -198,6 +199,9 @@ describe('the repo validator knows the new agent', () => {
       mkdirSync(join(dir, 'ml-specs', 'agents'), { recursive: true });
       mkdirSync(join(dir, 'ml-specs', 'commands'), { recursive: true });
       copyFileSync(VALIDATOR, join(dir, 'scripts', 'validate-plugin.mjs'));
+      mkdirSync(join(dir, 'ml-specs', 'scripts', 'lib'), { recursive: true });
+      copyFileSync(join(ROOT, 'ml-specs', 'scripts', 'lib', 'file-identity.mjs'),
+        join(dir, 'ml-specs', 'scripts', 'lib', 'file-identity.mjs'));
       writeFileSync(
         join(dir, 'ml-specs', 'commands', 'spec-verify.md'),
         '---\ndescription: fixture\nargument-hint: <spec>\n---\n\nUse the **security-reviewer** agent.\n',
@@ -281,5 +285,67 @@ describe('knowledge layer', () => {
     );
     assert.match(dispatchTable, /\| `security-reviewer` \|/);
     assert.doesNotMatch(promptSurface, /spec-verify\.md:44/);
+  });
+});
+
+// Check 13 — the byte-identity guard.
+//
+// This repo is a consumer of the toolkit it ships: `.github/scripts/knowledge-check.mjs` IS the
+// template seeded into adopting repos, and the two must never diverge. The invariant used to be
+// prose in a doc enforced by nobody. Check 13 enforces it — but the real tree always has the two
+// copies matching, so `npm test` and the §6.1 validator run only ever exercise the happy path.
+// Deleting the entire guard leaves both green. These tests are the reason it cannot be removed
+// or broken silently.
+//
+// Same fixture contract as the harnesses above: no manifests, so checks 1-5 always push errors
+// and exit 1 proves nothing — every assertion pins the stderr/stdout string instead.
+describe('check 13 — byte-identical copies', () => {
+  const TEMPLATE = join('ml-specs', 'templates', 'ci', 'knowledge-check.mjs');
+  const CI_COPY = join('.github', 'scripts', 'knowledge-check.mjs');
+
+  // NOTE, and it cost a debugging round: the validator sends WARNINGS to stdout but ERRORS to
+  // stderr. The harnesses above assert on stdout because they pin a warning; check 13 raises an
+  // error, so these read stderr. Returning both concatenated keeps the assertions honest either
+  // way and stops the next person rediscovering it.
+  /** Build a fixture whose two copies hold `template` and `ciCopy`, and run the validator. */
+  function runWithCopies({ template, ciCopy }) {
+    const dir = mkdtempSync(join(tmpdir(), 'sdd-identity-'));
+    try {
+      mkdirSync(join(dir, 'scripts'), { recursive: true });
+      copyFileSync(VALIDATOR, join(dir, 'scripts', 'validate-plugin.mjs'));
+      mkdirSync(join(dir, 'ml-specs', 'scripts', 'lib'), { recursive: true });
+      copyFileSync(join(ROOT, 'ml-specs', 'scripts', 'lib', 'file-identity.mjs'),
+        join(dir, 'ml-specs', 'scripts', 'lib', 'file-identity.mjs'));
+      for (const [rel, body] of [[TEMPLATE, template], [CI_COPY, ciCopy]]) {
+        if (body === null) continue;             // null means "this side is missing"
+        mkdirSync(dirname(join(dir, rel)), { recursive: true });
+        writeFileSync(join(dir, rel), body);
+      }
+      try {
+        return execFileSync('node', [join(dir, 'scripts', 'validate-plugin.mjs')],
+          { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+      } catch (e) {
+        return `${e.stdout ?? ''}${e.stderr ?? ''}`;
+      }
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }
+
+  test('identical copies raise no drift error', () => {
+    const out = runWithCopies({ template: 'same\n', ciCopy: 'same\n' });
+    assert.doesNotMatch(out, /has drifted from/, `unexpected drift error; output was:\n${out}`);
+    assert.doesNotMatch(out, /one of the two is missing/);
+  });
+
+  test('one byte of difference is reported as drift', () => {
+    const out = runWithCopies({ template: 'same\n', ciCopy: 'same \n' });
+    assert.match(out, /has drifted from/, `drift guard did not fire; output was:\n${out}`);
+    assert.match(out, /must be byte-identical/);
+  });
+
+  test('a missing side is reported, not silently skipped', () => {
+    const out = runWithCopies({ template: 'same\n', ciCopy: null });
+    assert.match(out, /one of the two is missing/, `missing-side branch did not fire; output was:\n${out}`);
   });
 });

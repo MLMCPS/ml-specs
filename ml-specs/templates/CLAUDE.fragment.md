@@ -63,12 +63,14 @@ from env.
 ## Spec-driven development
 
 Non-trivial changes start with a reviewable spec, not code. See `specs/README.md`. The loop:
-`/ml-specs:spec <ticket>` → human reviews → `/ml-specs:spec-advance … Approved` → `/ml-specs:spec-build` (test-first, one
+`/ml-specs:spec-explore` (optional) → `/ml-specs:spec <ticket>` → human reviews → `/ml-specs:spec-advance … Approved` → `/ml-specs:spec-build` (test-first, one
 functional/E2E test per user-facing criterion) → `/ml-specs:spec-verify` (adversarial + full suite green,
 §6.1) → `/code-review` → `/ml-specs:spec-advance … Verified` → `/ml-specs:pr` → merge → `/ml-specs:spec-advance … Archived`.
 
 Status is only ever written by `/ml-specs:spec-advance`, which refuses a transition whose evidence isn't
 there. `/ml-specs:repo-status` shows the board; `/ml-specs:repo-doctor` flags statuses the repo can't back up.
+
+Session handoffs live in `.claude/handoff/`, written by `/ml-specs:handoff` when a session ends with work in flight — committing or ignoring them is this repo's choice.
 
 Anything not in the approved spec is out of scope — update the spec first. Trivial one-line fixes
 are exempt: `/ml-specs:code` for those, `/ml-specs:spec` when a change touches an API, data model, event, or several

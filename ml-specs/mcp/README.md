@@ -52,7 +52,7 @@ Two behaviours worth knowing, because both are deliberate:
 
 Templates are also served as resources under `mlspec://templates/…`.
 
-Second, the **commands**, served as MCP prompts — all 18 of them, described from their own
+Second, the **commands**, served as MCP prompts — all 22 of them, described from their own
 frontmatter, with `$ARGUMENTS` filled in at `prompts/get`. Clients namespace these, so `spec`
 arrives as `/mcp__ml-specs__spec` rather than `/ml-specs:spec`; that is the client's doing, not a choice
 made here.
@@ -167,7 +167,8 @@ places it's written from drifting.
 
 ## Relationship to the plugin
 
-They compose — install both. The plugin gives you the loop (`/ml-specs:spec` → … → `/ml-specs:pr`), the agents, and
+They compose — install both. The plugin gives you the loop (`/ml-specs:spec-explore` (optional) → `/ml-specs:spec` → … →
+`/ml-specs:pr`), the agents, and
 the hooks; this gives every tool the same facts underneath. `knowledge_check` shares one
 implementation with the CI gate in `../templates/ci/knowledge-check.mjs`, imported rather than
 copied, so the two can't drift apart.

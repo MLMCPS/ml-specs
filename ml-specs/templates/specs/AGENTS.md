@@ -4,6 +4,7 @@ Spec-driven development as a team of subagents, mapped to the loop:
 
 | Agent | Phase | Command | Tools | Job |
 |-------|-------|---------|-------|-----|
+| `analyst` | ANALYZE | `/ml-specs:spec-explore` | read-only + Bash | Ticket or half-formed idea → a reviewable note under `specs/`: what exists, what it touches, two or three approaches with their trade-offs and one recommended, and the blocking contract questions. Compares rather than commits — no spec, no code, and it **reports** those questions rather than asking them. |
 | `spec-author` | SPECIFY | `/ml-specs:spec` | read + Write | Ticket → reviewable spec under `specs/`. No code. Stops and returns blocking contract questions rather than guessing them. |
 | `spec-reviewer` | SPECIFY | `/ml-specs:spec-review` | read-only + Bash | Adversarially checks the **draft spec** before a human reads it — contracts, testable criteria, ripple. Fresh context, so it sees what the author can't. |
 | `developer` | IMPLEMENT | `/ml-specs:spec-build` | read + Edit/Write + Bash | Builds ONE approved spec, test-first. |

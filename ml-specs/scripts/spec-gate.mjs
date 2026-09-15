@@ -153,7 +153,14 @@ const TEST_EXT = 'java|kt|kts|ts|tsx|js|jsx|mjs|cjs|py|go|rb|cs|php|scala|swift|
 function claimedTests(body) {
   const out = new Set();
   for (const m of body.matchAll(new RegExp(`[A-Za-z0-9_./\\\\-]+\\.(?:${TEST_EXT})\\b`, 'g'))) {
-    out.add(m[0].split('\\').join('/'));
+    const candidate = m[0].split('\\').join('/');
+    // A glob in the prose — `scripts/*.test.mjs` describing a runner's config — matches from the
+    // dot onward, because `*` is not in the character class above, and yields a stem-less
+    // `.test.mjs`. Nobody claimed that file, so failing tests-exist on it blocks a legitimate
+    // transition: exactly what this function's contract above says must not happen. A basename
+    // starting with `.` has no stem, so it is a pattern or a bare suffix, never a claimed test.
+    if (candidate.slice(candidate.lastIndexOf('/') + 1).startsWith('.')) continue;
+    out.add(candidate);
   }
   for (const m of body.matchAll(/\b([A-Z][A-Za-z0-9]*(?:Test|Tests|Spec|IT|TestCase))\b/g)) {
     out.add(m[1]);

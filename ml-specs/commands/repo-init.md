@@ -151,16 +151,24 @@ than inlining them. In a monorepo, prefer per-package sections/files over one fa
     has opt-in automation (post-edit format/lint, a pre-PR test reminder). Do NOT install hooks
     automatically — the commands are project-specific. If the user wants them, copy the chosen hooks
     into `.claude/settings.json` and replace the commands with this project's real ones. The
-    plugin's own hooks (knowledge-drift warning, secret scan) are already active on install and
-    need nothing here.
+    plugin's own hooks (knowledge-drift warning, session-handoff notice, secret scan) are already
+    active on install and need nothing here.
+
+15. **Session handoffs:** state in the generated `CLAUDE.md` that session handoff notes live in
+    `.claude/handoff/`, are written by `/ml-specs:handoff` when a session ends with work in flight,
+    and are surfaced at the next session start by the plugin's own hook. Whether the repo commits
+    them or ignores them is the repo's choice — say so, and don't decide it for them. Create no
+    directory and write no placeholder: git does not track an empty directory, and `/ml-specs:handoff`
+    creates it on first use.
 
 ## Phase 4 — REPORT
 
-15. Report what was created/skipped/merged, and what the human should review — especially
+16. Report what was created/skipped/merged, and what the human should review — especially
     `docs/PATTERNS.md` and `docs/ARCHITECTURE.md` (verify the learned patterns match intent, and
     correct anything you marked *inferred*). Do NOT commit — leave changes staged/untracked for review.
 
-The agents (`coder`, `spec-author`, `spec-reviewer`, `developer`, `reviewer`,
-`pr-author`) and commands (`/ml-specs:spec` → `/ml-specs:spec-review` → `/ml-specs:spec-build` → `/ml-specs:spec-verify` →
-`/ml-specs:spec-advance` → `/ml-specs:pr`) come from the plugin itself and need no per-repo files — they read the
-generated `CLAUDE.md` + `docs/` to learn this project.
+The agents (`analyst`, `coder`, `spec-author`, `spec-reviewer`, `developer`, `reviewer`,
+`pr-author`) and commands (`/ml-specs:spec-explore` (optional) → `/ml-specs:spec` → `/ml-specs:spec-review` →
+`/ml-specs:spec-build` → `/ml-specs:spec-verify` → `/ml-specs:spec-advance` → `/ml-specs:pr`) come from the plugin
+itself and need no per-repo files — they read the generated `CLAUDE.md` + `docs/` to learn this
+project.

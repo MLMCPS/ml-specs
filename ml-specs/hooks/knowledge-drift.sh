@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# sdd-toolkit :: SessionStart hook — knowledge-layer drift warning.
+# ml-specs :: SessionStart hook — knowledge-layer drift warning.
 #
 # Prints ONE line when this repo's learned knowledge layer has fallen behind the code, and
 # nothing at all otherwise. Never blocks; always exits 0.
 #
-# Why a hook rather than a command: /sdd-doctor and /sdd-refresh only run when a human
-# remembers to type them, and drift is silent — the docs don't get louder as they get wronger.
-# The reminder has to be automatic or it doesn't happen.
+# Why a hook rather than a command: /ml-specs:repo-doctor and /ml-specs:repo-refresh only run
+# when a human remembers to type them, and drift is silent — the docs don't get louder as they
+# get wronger. The reminder has to be automatic or it doesn't happen.
 #
 # Tunable: SDD_DRIFT_THRESHOLD (default 30) — how many source commits since the knowledge
 # layer was last touched before it's worth saying anything. Raise it if this gets noisy.
@@ -39,5 +39,5 @@ behind="$(git rev-list --count "$last..HEAD" -- . ':(exclude)docs/*' ':(exclude)
 [ -n "$behind" ] || exit 0
 [ "$behind" -gt "$threshold" ] 2>/dev/null || exit 0
 
-echo "sdd-toolkit: the knowledge layer (CLAUDE.md / docs/) is ${behind} source commits behind the code. Run /sdd-doctor to see the drift, /sdd-refresh to fix it."
+echo "ml-specs: the knowledge layer (CLAUDE.md / docs/) is ${behind} source commits behind the code. Run /ml-specs:repo-doctor to see the drift, /ml-specs:repo-refresh to fix it."
 exit 0

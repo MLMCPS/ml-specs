@@ -35,7 +35,7 @@ const ROOT = resolve(rootFlag !== -1 ? (argv[rootFlag + 1] ?? '.') : process.cwd
 // Version skew is the predictable failure of distributing this: one teammate on a stale npx
 // cache, another on a fresh plugin update, both reporting different answers. Make "what am I
 // actually running?" a one-liner rather than an archaeology exercise.
-const VERSION = '1.1.0';
+const VERSION = '1.2.0';
 if (argv.includes('--version') || argv.includes('-v')) {
   console.log(`ml-specs-mcp ${VERSION}  (${fileURLToPath(import.meta.url)})`);
   process.exit(0);

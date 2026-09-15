@@ -15,7 +15,7 @@
 // Exit 1 on errors (a doc asserts something false). Warnings never fail the build.
 
 import { readFileSync, existsSync, readdirSync } from 'node:fs';
-import { join, dirname } from 'node:path';
+import { join, dirname, relative, isAbsolute } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { execFileSync } from 'node:child_process';
 
@@ -31,7 +31,13 @@ const SOURCE_EXT = new Set([
   'properties', 'toml', 'vue', 'svelte',
 ]);
 
-const REF = /(?<![\w:/])([A-Za-z0-9_][\w./-]*\.[A-Za-z0-9]+):(\d+)(?:-(\d+))?\b/g;
+// The optional prefix admits one or more `../` segments, or `./`, or a single leading `.` —
+// every repo's docs cite `.github/`, `.claude-plugin/`, `.mlskills.json`, and docs that live two
+// directories deep naturally cite `../../CLAUDE.md`. It must stay an alternation and not the
+// shorter `\.{0,2}\/?`, which would read `..github/x.yml` as a path. The lookbehind excludes `.`
+// for the same reason: without it `..github/x.yml` matches as `.github/x.yml`, because the
+// character before the captured dot is itself a dot.
+const REF = /(?<![\w:/.])((?:(?:\.\.\/)+|\.\/|\.)?[A-Za-z0-9_][\w./-]*\.[A-Za-z0-9]+):(\d+)(?:-(\d+))?\b/g;
 
 /**
  * Run the knowledge-layer checks. Pure: returns findings, never logs or exits.
@@ -45,6 +51,21 @@ export function runChecks({ root = process.cwd(), base = null } = {}) {
 
   const abs = (p) => join(root, p);
   const has = (p) => existsSync(abs(p));
+
+  // Where a cited path actually points. A `./` or `../` citation is relative to the doc that
+  // wrote it; everything else stays repo-root-relative, exactly as before. `join` normalises in
+  // both cases, so mid-path `./` and `../` segments count too (`a/./b.mjs`, `a/../b.mjs`).
+  const refTarget = (doc, p) =>
+    /^\.\.?\//.test(p) ? join(root, dirname(doc), p) : join(root, p);
+
+  // Judged on the RESOLVED path, never on the raw prefix: `a/../../../../etc/hosts.md` leaves the
+  // tree without ever beginning with `../`. `relative()` rather than `startsWith(root)`, which
+  // would accept a sibling directory whose name merely extends the root's (`myrepo-other`).
+  // Lexical only — `existsSync` follows symlinks, and chasing them is out of contract.
+  const insideRoot = (resolved) => {
+    const rel = relative(root, resolved);
+    return rel !== '' && !isAbsolute(rel) && !rel.startsWith('..');
+  };
   const git = (...a) => {
     try {
       return execFileSync('git', ['-C', root, ...a], {
@@ -68,7 +89,10 @@ export function runChecks({ root = process.cwd(), base = null } = {}) {
     return { docs: [], refsChecked: 0, errors, warnings, empty: true };
   }
 
-  const lineCount = (p) => readFileSync(abs(p), 'utf8').split('\n').length;
+  // Takes an already-resolved path, so existence and line count read the SAME file. Resolving
+  // twice from the raw capture is how a relative reference gets its existence right and its line
+  // count from whatever happens to sit at the repo root under that name.
+  const lineCount = (resolved) => readFileSync(resolved, 'utf8').split('\n').length;
   let refsChecked = 0;
 
   for (const doc of docs) {
@@ -82,11 +106,17 @@ export function runChecks({ root = process.cwd(), base = null } = {}) {
       if (path.startsWith('http')) continue;
 
       refsChecked++;
-      if (!has(path)) {
+      // Every message names the path exactly as the doc wrote it, never the resolved form.
+      const target = refTarget(doc, path);
+      if (!insideRoot(target)) {
+        err(doc, `references ${path}:${startStr}, but ${path} resolves outside the repository root`);
+        continue;
+      }
+      if (!existsSync(target)) {
         err(doc, `references ${path}:${startStr}, but ${path} does not exist`);
         continue;
       }
-      const total = lineCount(path);
+      const total = lineCount(target);
       const line = Number(endStr || startStr);
       if (line > total) {
         err(doc, `references ${path}:${startStr}${endStr ? '-' + endStr : ''}, but that file is only ${total} lines`);

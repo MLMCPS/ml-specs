@@ -10,9 +10,23 @@ against, and the artifact a human reviews **before** code exists.
 ## The loop
 
 ```
-  1. SPECIFY   →   2. PLAN   →   3. IMPLEMENT   →   4. VERIFY
-   (write spec)   (approve)     (code + tests)    (review + CI)
+  0. ANALYZE   →   1. SPECIFY   →   2. PLAN   →   3. IMPLEMENT   →   4. VERIFY
+   (optional)       (write spec)   (approve)     (code + tests)    (review + CI)
 ```
+
+0. **Analyze** (optional) — `/ml-specs:spec-explore <ticket-or-description>`
+   For a half-formed idea, or a change where the *approach* is the open question rather than the
+   details. The `analyst` agent compares two or three approaches with what each costs and what it
+   forecloses, names the cross-module ripple, and surfaces the blocking contract questions — then
+   the command writes `specs/explore-<slug>.md`. Nothing is committed to: no spec, no code, no
+   `Status`, and no number.
+
+   `/ml-specs:spec` picks that note up on its own and carries its blocking questions and its
+   **rejected** approaches into the spec, so a reviewer three weeks later can tell an alternative
+   that was considered and dismissed from one nobody thought of.
+
+   **Skip it whenever the approach is obvious.** This step is optional and the loop below is
+   unchanged without it.
 
 1. **Specify** — `/ml-specs:spec <ticket-or-description>`
    Claude explores the relevant code, then does two things **before** the spec reaches you:

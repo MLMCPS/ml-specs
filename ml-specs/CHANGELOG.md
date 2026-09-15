@@ -6,6 +6,150 @@ All notable changes to this plugin. Bump `version` in `.claude-plugin/plugin.jso
 
 Entries before 1.0.0 refer to this plugin under its former name, `sdd-toolkit`.
 
+## [1.2.0]
+
+### Added
+- **An ANALYZE phase before SPECIFY — `/ml-specs:spec-explore`.** The loop used to go straight to
+  drafting: `/ml-specs:spec` explored the code and then committed to a design by writing it, so the
+  analysis that chose the approach happened invisibly and the approaches it rejected were lost. A
+  reviewer reading the spec three weeks later could not tell an alternative that was considered and
+  dismissed from one nobody thought of, and the same alternatives got re-litigated in review.
+
+  `/ml-specs:spec-explore <ticket-or-idea>` delegates to a new, read-only **`analyst`** agent
+  (`Read, Grep, Glob, Bash` — no `Write`, no `Edit`) and writes a reviewable note to
+  `specs/explore-<slug>.md`: what exists, what it touches, two or three approaches with what each
+  costs and what it forecloses, the blocking contract questions, and what it could not determine.
+
+  `/ml-specs:spec` gains a **step 0** that globs `specs/explore-*.md` and matches a note on its
+  `Ticket` cell — or, for the `— (no tracker)` case that is most specs, on a normalized-token
+  `Title`. Every match is reported and the human is asked; a match is never picked silently. The
+  matched note's blocking questions go into step 3 instead of being re-derived, and its rejected
+  approaches into the spec's rationale.
+
+  **The phase is optional and the note is outside the spec lifecycle.** With no matching note
+  `/ml-specs:spec` behaves exactly as before. The note has no four-digit prefix, so it carries no
+  `Status`, never appears in `/ml-specs:repo-status` or `spec_list`, and `/ml-specs:spec-advance`
+  neither reads nor writes it. Every statement of the loop that ships — both diagrams, both
+  walkthroughs, the agent tables and the command chains — now shows five phases, with the literal
+  word *optional* on the new one.
+
+- **A command that answers "what does this code actually do?" — `/ml-specs:explain`.** Every
+  read-only command the toolkit shipped pointed at a *change*: `/ml-specs:spec-explore` analyses a
+  ticket into approaches, `/ml-specs:repo-doctor` reports knowledge-layer drift,
+  `/ml-specs:repo-status` summarises the board. Understanding an unfamiliar module — joining a
+  codebase, reviewing someone else's PR, picking up a service after six months — fell back to
+  unstructured chat, where the answer is uncited and gone when the session ends.
+
+  `/ml-specs:explain <path-or-symbol-or-flow>` delegates to a new, read-only **`explainer`** agent
+  (`Read, Grep, Glob, Bash` — no `Write`, no `Edit`) and writes a reviewable note to
+  `specs/explain-<slug>.md`: what the code does, its entry points, the flow through it, its
+  contracts and callers, the gotchas, and what the agent could not determine — every claim carrying
+  a real `file:line`.
+
+  **It is outside the SDD loop**, like `/ml-specs:code` and `/ml-specs:fix`, and it is not
+  `/ml-specs:spec-explore`: that command decides what should be built, this one describes what is
+  already there. The note has no four-digit prefix, so it carries no `Status`, never appears in
+  `/ml-specs:repo-status` or `spec_list`, and `/ml-specs:spec-advance` neither reads nor writes it.
+
+- **A way to tell the toolkit you don't use architecture standards.** Parts of the verify loop
+  integrate with `ml-skills`: the `reviewer` agent runs a standards check, `/ml-specs:spec-verify`
+  relays its verdict, and `/ml-specs:spec-advance` records it on the `Verified` gate. Those
+  instructions are deliberately honest about absence — an unrun check is reported `unavailable`,
+  never rounded to a pass. In a repo that does not use `ml-skills`, that honesty turns into noise:
+  every review ends with a paragraph stating that nothing happened, and it has to be read and
+  discarded each time.
+
+  A repo-root `.ml-specs.json` now says it once:
+
+  ```json
+  { "mlSkills": "off" }
+  ```
+
+  On `off` the check is not run and its absence is not reported. `auto` — the meaning when the file
+  is absent — keeps today's behaviour exactly, so no existing repo changes unless it opts in.
+
+  **`/ml-specs:spec-advance` still records one line** in the transition note when the flag is `off`.
+  Suppressing the per-review paragraph removes noise; suppressing the permanent record would mean an
+  archived spec could not be read to tell "checked, clean" apart from "opted out" — which is the
+  same `unavailable ≠ pass` confusion the check exists to prevent, moved somewhere harder to notice.
+
+  The flag **fails open**. A missing key, unreadable JSON, or an unrecognised value all mean `auto`,
+  never `off` — a typo must not silently disable a gate.
+
+  This gates the integration; it does not remove it. `/ml-specs:repo-skills`, the standards template
+  and the skills documentation template all still ship, and setting the value back to `auto` restores
+  the previous behaviour with no other change.
+
+- **A session handoff standard — `/ml-specs:handoff`.** Work does not fit in one session, and when
+  one ends everything the session worked out is gone: which approach was rejected and why, what is
+  half-done, which test is red on purpose, what the next concrete step is. The next session starts
+  from the code alone and re-derives it, badly.
+
+  `/ml-specs:handoff [label]` gathers verifiable state first (`git rev-parse --abbrev-ref HEAD`,
+  `git status --short`, `git log --oneline`), then writes one note per invocation to
+  `.claude/handoff/<YYYY-MM-DD-HHMMSS>-<slug>.md` — where this got to, what is in flight, what was
+  decided *and rejected*, the next step, and the landmines. It runs **inline and delegates to no
+  agent**, deliberately: a subagent starts with fresh context and cannot see the parent session's
+  conversation, which is the command's entire input. It writes nothing but the note, commits
+  nothing, and touches no spec's `Status`.
+
+  A third always-active hook, `hooks/handoff-notice.sh` (`SessionStart`), prints **one line** when a
+  note from the last 7 days is waiting, naming it and saying to read it or delete it — and nothing
+  at all otherwise. It never reads the note into context and never blocks. Tune the window with
+  `ML_HANDOFF_MAX_AGE_DAYS`.
+
+  `/ml-specs:repo-init` now states the convention in the `CLAUDE.md` it generates, including that
+  committing handoffs or ignoring them is the adopting repo's choice.
+
+  Fixed in passing, in the sibling hook: `knowledge-drift.sh` still told every adopting repo to run
+  `/sdd-doctor` and `/sdd-refresh`, names gone since the `/ml-specs:` namespacing, and labelled
+  itself `sdd-toolkit`. It now names `/ml-specs:repo-doctor` and `/ml-specs:repo-refresh`. The
+  `SDD_DRIFT_THRESHOLD` environment variable is deliberately **not** renamed — adopting repos may
+  already set it.
+
+## [1.1.1]
+
+### Fixed
+- **The CI knowledge-check template reported broken references for documentation that was
+  correct.** Its reference parser required a path to begin with an alphanumeric, so a leading dot
+  was never captured: `.github/workflows/release.yml:127` was read as
+  `github/workflows/release.yml:127` and reported as a file that does not exist. Every repo's docs
+  cite dot-prefixed paths — `.github/`, `.claude-plugin/`, `.mlskills.json` — so the gate failed on
+  correct input in this repo (15 errors, every one a false positive) and would have done the same
+  in every repo that adopted it. A gate that fails on correct input gets switched off, and the real
+  check goes with it.
+
+  Relative citations were broken in a second way. `./x.mjs:1` was silently never checked at all,
+  and `../a/b.mjs:1` captured the meaningless fragment `b.mjs`, producing a hard error naming a
+  path the document never wrote. `./` and `../` now resolve against the directory of the document
+  that contains them, which is what a reader assumes they mean; everything else stays
+  repository-root-relative exactly as before.
+
+  A citation that resolves outside the repository is now reported rather than skipped, with its own
+  wording — `resolves outside the repository root` — instead of the misleading "does not exist".
+  The distinction matters in CI, where nobody can ask which was meant. The check is lexical only:
+  symlinks are deliberately out of contract.
+
+  The line-number half of the check was resolving separately from the existence half, so a relative
+  citation could confirm the right file exists and then count the lines of a different one. Both
+  now resolve identically.
+
+- **Upgrading will surface real breakage that was previously hidden.** Because dot-prefixed paths
+  were never resolved, any genuinely stale `.github/…` or `.claude-plugin/…` citation in an adopted
+  repo's documentation has been passing silently. Those become visible on the first run after this
+  release. Expect a one-off cleanup; `/ml-specs:repo-refresh` is the intended way to clear it.
+
+### Changed
+- The knowledge-check template is now covered by tests, which it previously had none of. They live
+  in `ml-specs/tests/` rather than beside the file they exercise, so that `templates/` keeps meaning
+  exactly one thing: what gets written into an adopting repo.
+
+  The marketplace validator also now enforces that the template and this repository's own copy of it
+  stay byte-identical — they are required to match and nothing checked it. The check itself runs
+  only in this repository's CI and is not part of the published package; the small comparison
+  helper it calls, `scripts/lib/file-identity.mjs`, does ship, though nothing in the published
+  packages imports it.
+
 ## [1.1.0]
 
 ### Added

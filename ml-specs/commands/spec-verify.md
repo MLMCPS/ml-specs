@@ -39,7 +39,11 @@ Relay both agents' verdicts without softening them:
 - The **must-fix list**, each with `file:line`.
 - The **final-acceptance result** (spec §6.1) — the real command and its real output. If the suite
   could not be run, say so explicitly; never report an unrun suite as green.
-- The **architecture standards result** — from **`verify_evidence`** on the `ml-skills` MCP server,
+- The **architecture standards result** — unless `.ml-specs.json` at the repo root sets
+  `"mlSkills": "off"`, in which case omit this bullet completely rather than reporting it as
+  unavailable. Any other state — no file, no key, unreadable JSON, unrecognised value — is `auto`,
+  the behaviour below; fail open, never silently into `off`. Otherwise, from **`verify_evidence`**
+  on the `ml-skills` MCP server,
   with `base` set to the branch this work forked from so findings are scoped to what this change
   actually touched. Report its `verdict` verbatim: `fail`, `pass`, `partial`, or `inconclusive`.
   **`inconclusive` means clean but nothing was ratified, so nothing could have failed — it is not a
@@ -65,7 +69,8 @@ Then split the must-fixes into two groups and act:
 
 Next step:
 - **Clean** (every criterion satisfied, functional/E2E present for the user-facing ones, full suite
-  green, no new error-severity standards finding, **and the security verdict is `clear`**) →
+  green, no new error-severity standards finding — *unless `.ml-specs.json` sets `"mlSkills": "off"`,
+  in which case that clause does not apply at all* — **and the security verdict is `clear`**) →
   `/ml-specs:spec-advance <spec-file> Verified`, then `/ml-specs:pr <spec-file>`. Both `blocked` and `inconclusive`
   stop the `Verified` transition — `blocked` because there is a reachable finding, `inconclusive`
   because nobody knows whether there is one.

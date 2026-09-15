@@ -32,7 +32,17 @@ Process:
    `Makefile`/`Taskfile` target). Report real results; if you cannot run them, say so explicitly
    rather than assuming green.
 
-6. **Run the architecture standards check** — **`verify_evidence`** on the `ml-skills` MCP server,
+6. **Run the architecture standards check** — but first read `.ml-specs.json` at the repo root, if
+   it exists. If it sets `"mlSkills": "off"`, **skip this step entirely and say nothing about
+   architecture standards** anywhere in your output — not "unavailable", not "skipped". The repo
+   has opted out; reporting its absence as a gap is the noise the flag exists to remove.
+
+   Anything else means `"auto"`: run the check if it is there, and report honestly when it is not.
+   That includes a missing file, a missing key, unreadable JSON, and any unrecognised value — **fail
+   open to `auto`, never to `off`**. A typo must not silently disable a gate; if the file is present
+   but you could not read the flag, say so in one line and proceed as `auto`.
+
+   When it is in scope: **`verify_evidence`** on the `ml-skills` MCP server,
    with `base` set to the branch this work forked from so findings are scoped to what actually
    changed. Fall back to `check_repo`, or `npx @mlmcps/ml-skills check . --json`, only if that tool
    is not there. This is the mechanical half of the review and it is not a matter of opinion, so
@@ -58,8 +68,11 @@ Process:
    are must-fixes.
 
 Return a verdict per acceptance criterion (satisfied / not satisfied / untested), the standards
-result (errors, warnings, unratified standards, or *unavailable*), plus a short list of must-fix
+result (errors, warnings, unratified standards, or *unavailable* — omitted entirely when
+`.ml-specs.json` sets `"mlSkills": "off"`), plus a short list of must-fix
 issues. Be specific with `file:line`. Approve (and only then is the spec `Verified`) only when
 every acceptance criterion is satisfied, each user-facing one has a passing functional/E2E test,
-the full final-acceptance suite is green, and the standards check introduced no new
-error-severity findings.
+the full final-acceptance suite is green, and — **unless step 6 was skipped because
+`.ml-specs.json` sets `"mlSkills": "off"`** — the standards check introduced no new error-severity
+findings. When the repo has opted out, that clause simply does not apply; do not withhold approval
+for a check you were told not to run, and do not mention it.

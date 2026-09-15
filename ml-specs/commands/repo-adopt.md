@@ -75,8 +75,8 @@ The plugin's templates live under `${CLAUDE_PLUGIN_ROOT}/templates/`.
 
 10. **CI + hooks** — offer, don't install: the knowledge-layer gate
    (`${CLAUDE_PLUGIN_ROOT}/templates/ci/`) with `--warn-only` for a repo with existing drift, and
-   the opt-in project hooks. Say that the plugin's own hooks (drift warning, secret scan) are
-   already active on install and need nothing here.
+   the opt-in project hooks. Say that the plugin's own hooks (drift warning, session-handoff notice,
+   secret scan) are already active on install and need nothing here.
 
 ## Phase 4 — report
 

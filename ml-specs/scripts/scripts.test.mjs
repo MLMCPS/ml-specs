@@ -180,3 +180,47 @@ describe('nfr-compile', () => {
     rmSync(dir, { recursive: true, force: true });
   });
 });
+
+describe('spec-gate does not invent a test from a glob', () => {
+  // Spec 0007 AC20. Found by running 0007's own Approved -> Implemented gate: claimedTests()
+  // harvests filename-with-extension tokens out of section 6, and its character class excludes
+  // `*`, so a glob QUOTED IN PROSE matched from the dot onward and produced a stem-less
+  // `.test.mjs`. No spec claimed that file, so tests-exist failed and blocked a legitimate
+  // transition — the precise outcome claimedTests()'s own contract says is worse than a miss.
+  //
+  // Asserted on a section 6 that ALSO names a real test, so a pass proves the phantom is gone
+  // rather than proving the gate went blind: strip the real test and this must go red.
+  const withSection6 = (s6) =>
+    `# Spec: Fixture\n\n| | |\n|---|---|\n| **Ticket** | PAY-1 |\n| **Status** | Approved |\n\n`
+    + `## 5. Acceptance criteria\n\n- [x] **AC1** — Given x, when y, then z.\n\n`
+    + `## 6. Test plan\n\n${s6}\n`;
+
+  test('a quoted glob in section 6 is not treated as a claimed test', () => {
+    const dir = repo({
+      '0201-glob.md': withSection6(
+        "New tests live in `scripts/spec-gate-fixture.test.mjs`. The name matches the\n"
+        + "`'scripts/*.test.mjs'` glob at `package.json:7`, so the runner picks it up.",
+      ),
+    });
+    mkdirSync(join(dir, 'scripts'), { recursive: true });
+    writeFileSync(join(dir, 'scripts', 'spec-gate-fixture.test.mjs'), '// fixture\n');
+
+    const r = run('spec-gate.mjs', ['specs/0201-glob.md', '--to', 'Implemented'], dir);
+    // The phantom, when present, is listed on its own indented line as a bare stem-less token.
+    assert.doesNotMatch(`${r.stdout}${r.stderr}`, /^\s+\.test\.mjs\s*$/m,
+      `a stem-less .test.mjs was harvested from the glob:\n${r.stdout}`);
+    assert.match(r.stdout, /PASS\s+tests-exist/, `tests-exist did not pass:\n${r.stdout}`);
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  test('a genuinely missing test still fails the gate', () => {
+    // The other half: the fix must not make tests-exist unable to fail.
+    const dir = repo({
+      '0202-missing.md': withSection6('| AC1 | unit | `scripts/nope.test.mjs` |'),
+    });
+    const r = run('spec-gate.mjs', ['specs/0202-missing.md', '--to', 'Implemented'], dir);
+    assert.equal(r.code, 1);
+    assert.match(r.stdout, /FAIL\s+tests-exist/);
+    rmSync(dir, { recursive: true, force: true });
+  });
+});

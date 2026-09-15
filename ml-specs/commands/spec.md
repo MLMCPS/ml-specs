@@ -14,6 +14,34 @@ adversarial pass find the holes before the human does rather than after.
 
 Steps:
 
+0. **Look for an existing analysis.** Glob `specs/explore-*.md` and read each header table.
+   `/ml-specs:spec-explore` may already have compared the approaches and found the blocking
+   questions; re-deriving them wastes the pass and loses the alternatives it rejected.
+
+   **The branch is decided per note, on that note's own `Ticket` cell — not on the argument.** For
+   each globbed note: if its `Ticket` cell **contains `no tracker`, case-insensitively** (so
+   `— (no tracker; proposed 2026-09-12)` counts), match it on **Title**; otherwise compare its
+   `Ticket` cell to the argument **exactly**, and do not Title-match it at all. A note carrying a
+   real tracker ID is therefore never reached by free-prose input: a tracker ID is an exact key, and
+   guessing past it is how the wrong analysis gets attached.
+
+   When Title-matching, compare as **normalized tokens**. Normalize by: lowercase; **replace every
+   run of non-alphanumeric characters with a single space** (so `spec-explore` becomes the two
+   tokens `spec`, `explore` — punctuation is replaced, never deleted); trim; split on spaces. A note
+   matches when the **shorter** token list appears in the longer **in order** — an in-order
+   subsequence, not necessarily contiguous — **and** the shorter list has **at least two tokens**.
+   So `add explore phase` matches a note titled `Add the explore phase`, while a one-word argument
+   like `fix` is below the floor and matches nothing.
+
+   **Report every match and ask which to use — never pick one silently.** A loose match silently
+   attached to the wrong spec is worse than a question. **With no match, say so and proceed exactly
+   as today** — `/ml-specs:spec-explore` is optional and this command is unchanged without it.
+
+   When a note *is* matched and chosen, **consume it**: take its **blocking questions** into step 3
+   and ask those rather than re-deriving them, and take its **rejected approaches** into the spec's
+   rationale so a later reader can see what was considered and dismissed. A note nothing reads is a
+   document nobody should have written.
+
 1. Detect the stack (any language) from the manifest/build file and existing source, then read
    `CLAUDE.md`, `docs/PATTERNS.md`, and `specs/README.md` so you follow this project's conventions.
 

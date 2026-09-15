@@ -2,7 +2,11 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { parseCriteria, splitCell, resolveStatus, LIFECYCLE } from './specs.mjs';
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
+
+import { parseCriteria, splitCell, resolveStatus, listSpecs, LIFECYCLE } from './specs.mjs';
 
 describe('acceptance criteria', () => {
   test('the template style parses', () => {
@@ -65,5 +69,58 @@ describe('status resolution is unchanged by the new fields', () => {
 
   test('the lifecycle is the five stages the toolkit ships', () => {
     assert.deepEqual(LIFECYCLE, ['Draft', 'Approved', 'Implemented', 'Verified', 'Archived']);
+  });
+});
+
+describe('listSpecs filters by filename', () => {
+  test('an explore- note is invisible to listSpecs while a real spec is not', () => {
+    // Spec 0007 AC10. `/ml-specs:spec-explore` writes `specs/explore-<slug>.md` with no four-digit
+    // prefix, deliberately: SPEC_FILE does not match it, so it never carries a Status, never
+    // appears in /ml-specs:repo-status or spec_list, and /ml-specs:spec-advance neither reads nor
+    // writes it. The fixture holds BOTH kinds of file — with only the note, an empty result would
+    // pass the assertion vacuously and prove nothing about filtering.
+    //
+    // This is the first filesystem-backed case in this file; everything above is pure parsing.
+    const dir = mkdtempSync(join(tmpdir(), 'sdd-specs-'));
+    try {
+      mkdirSync(join(dir, 'specs'), { recursive: true });
+      writeFileSync(join(dir, 'specs', 'explore-foo.md'),
+        '# Explore: foo\n\n| | |\n|---|---|\n| **Ticket** | \u2014 (no tracker) |\n| **Title** | foo |\n| **Date** | 2026-09-15 |\n');
+      writeFileSync(join(dir, 'specs', '0001-real.md'),
+        '# Spec: real\n\n| | |\n|---|---|\n| **Status** | Draft |\n');
+
+      const specs = listSpecs(dir);
+      assert.deepEqual(specs.map((s) => s.file), ['specs/0001-real.md']);
+      assert.equal(specs[0].id, '0001');
+      assert.equal(specs[0].slug, 'real');
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test('an explain- note is invisible to listSpecs while a real spec is not', () => {
+    // Spec 0011 AC9. `/ml-specs:explain` writes `specs/explain-<slug>.md`, the third file family to
+    // live under specs/ and the second with no four-digit prefix. It relies on exactly the same
+    // mechanism as the explore- note above — SPEC_FILE at lib/specs.mjs:44 — and on NO new filter
+    // code, which is precisely why "nothing changed" is asserted here rather than assumed: a
+    // regression that widened SPEC_FILE would silently give explain notes a lifecycle identity.
+    //
+    // The fixture holds BOTH kinds of file: with only the note, an empty result would pass
+    // vacuously and prove nothing about filtering.
+    const dir = mkdtempSync(join(tmpdir(), 'sdd-specs-'));
+    try {
+      mkdirSync(join(dir, 'specs'), { recursive: true });
+      writeFileSync(join(dir, 'specs', 'explain-foo.md'),
+        '# Explain: foo\n\n| | |\n|---|---|\n| **Target** | src/foo.mjs |\n| **Title** | foo |\n| **Date** | 2026-09-15 |\n');
+      writeFileSync(join(dir, 'specs', '0001-real.md'),
+        '# Spec: real\n\n| | |\n|---|---|\n| **Status** | Draft |\n');
+
+      const specs = listSpecs(dir);
+      assert.deepEqual(specs.map((s) => s.file), ['specs/0001-real.md']);
+      assert.equal(specs[0].id, '0001');
+      assert.equal(specs[0].slug, 'real');
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });

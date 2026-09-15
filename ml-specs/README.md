@@ -71,8 +71,16 @@ there, you won't recoup it. The design assumes repeated work against the same co
 ## What's inside
 
 **Agents** (`agents/`)
+- `analyst` — the ANALYZE phase: turns a ticket or half-formed idea into a comparison of viable
+  approaches with their trade-offs, the cross-module ripple and the blocking contract questions a
+  spec must answer (read-only; it reports those questions, it does not ask them, and it does not
+  write the note). Run it with `/ml-specs:spec-explore`.
 - `coder` — senior-engineer coding agent; detects the stack, inspects before editing, smallest
   correct change, fixed `PLAN / FILES / IMPLEMENTATION / REVIEW / TESTS` output, asks instead of guessing.
+- `explainer` — explains what existing code **does today**: a cited account of its behaviour,
+  entry points, flow, contracts and callers, gotchas, and what it could not determine (read-only;
+  it does not modify code, does not propose changes, and does not write the note). Run it with
+  `/ml-specs:explain`.
 - `spec-author` — turns a ticket into a reviewable spec under `specs/` (no code). Stops and
   returns blocking contract questions rather than guessing them or parking them in the document.
 - `spec-reviewer` — adversarially reviews a **draft spec** before a human reads it (read-only,
@@ -94,7 +102,8 @@ there, you won't recoup it. The design assumes repeated work against the same co
   land in the calling session's context.
 
 **Commands** (`commands/`)
-The loop: `/ml-specs:spec` → `/ml-specs:spec-review` → `/ml-specs:spec-advance Approved` → `/ml-specs:spec-build` → `/ml-specs:spec-verify` →
+The loop: `/ml-specs:spec-explore` (optional) → `/ml-specs:spec` → `/ml-specs:spec-review` →
+`/ml-specs:spec-advance Approved` → `/ml-specs:spec-build` → `/ml-specs:spec-verify` →
 `/ml-specs:spec-advance Verified` → `/ml-specs:pr` → `/ml-specs:spec-advance Archived`.
 
 - `/ml-specs:code <task>` — make a one-shot change with the `coder` agent (any language; detects the stack).
@@ -103,6 +112,22 @@ The loop: `/ml-specs:spec` → `/ml-specs:spec-review` → `/ml-specs:spec-advan
   is the middle path, and the discipline is one rule: **reproduce it with a failing test first.**
   Then root cause (stated, with evidence), smallest change, real verification, and a search for the
   same defect in sibling code paths. Escalates to `/ml-specs:spec` if the fix would change a contract.
+- `/ml-specs:handoff [label]` — write a session handoff note to
+  `.claude/handoff/<YYYY-MM-DD-HHMMSS>-<slug>.md`: what got done, what is in flight (from
+  `git status`, not memory), what was decided *and rejected*, the next concrete step, and the
+  landmines. Runs inline — a subagent cannot see the session it would be summarising. Outside the
+  loop: it changes no code, commits nothing, and carries no `Status`. A `SessionStart` hook surfaces
+  a recent note in one line so the next session actually reads it.
+- `/ml-specs:explain <target>` — answer *what does this code actually do?* The `explainer` agent
+  reads a module, file, function or flow read-only and returns a cited account — what it does,
+  entry points, flow, contracts and callers, gotchas, and what it could not determine — and the
+  command writes it to `specs/explain-<slug>.md`. Outside the loop: it changes no code and the note
+  carries no `Status`.
+- `/ml-specs:spec-explore <ticket>` — the **optional** ANALYZE phase before the spec exists: the
+  `analyst` agent compares two or three approaches with their trade-offs and surfaces the blocking
+  contract questions, and the command writes them to `specs/explore-<slug>.md`. `/ml-specs:spec`
+  then consumes that note instead of re-deriving it — so the approaches you rejected are on the
+  record rather than re-litigated in review. Skip it and the loop is unchanged.
 - `/ml-specs:spec <ticket>` — draft a spec. Asks the blocking contract questions up front (batched, with
   recommendations), then self-reviews via `spec-reviewer` before handing you the draft — so your
   review is an approval, not a hole-hunt.
@@ -204,6 +229,10 @@ reported as **unavailable**, never as clean. An unrun check is not a passing one
   more than 30 source commits behind the code, silent otherwise. Drift is invisible and
   `/ml-specs:repo-refresh` only runs when someone remembers it; this is the reminder. Tune with
   `SDD_DRIFT_THRESHOLD`.
+- **Session handoff notice** (`SessionStart`) — one line when `.claude/handoff/` holds a note written
+  in the last 7 days, naming the newest one and telling you to read it or delete it; silent
+  otherwise. It surfaces the note, never reads it into context. Tune the age window with
+  `ML_HANDOFF_MAX_AGE_DAYS`.
 - **Secret scan** (`PreToolUse` on Bash) — blocks a commit whose staged diff contains a likely AWS
   key, private key, Slack/GitHub token, JWT, or `secret=…` assignment. Added lines only, so removing
   a leaked key is never blocked. False positives: add a regex to `.claude/secret-allowlist.txt`.
@@ -291,7 +320,7 @@ read-only and dependency-free. **Nine tools**: `estate_lookup` (who produces/con
 (collision-safe across branches), plus the `scripts/` half — `spec_gate` (the mechanical lifecycle
 evidence), `spec_trace` (ticket → test-case chain), `spec_brief` (an approved spec packaged for
 whoever implements it), `nfr_check` (which NFRs do not route into anything enforceable) and
-`estate_survey`. Plus the templates as `mlspec://` resources and all 19 commands as MCP prompts, with
+`estate_survey`. Plus the templates as `mlspec://` resources and all 22 commands as MCP prompts, with
 the agents they delegate to inlined.
 
 Exposing `scripts/` matters more than the count suggests: `spec-gate.mjs` is the gate the whole
@@ -342,8 +371,73 @@ VS Code's Copilot, CI.
 /ml-specs:repo-init        # learns THIS repo, then generates CLAUDE.md + docs/PATTERNS.md + docs/ARCHITECTURE.md, scaffolds specs/, .gitattributes, .claude/settings.json
 /ml-specs:repo-estate      # only if this repo is one service in a larger estate — indexes the cross-service contracts
 ```
-Then use the loop: `/ml-specs:spec <ticket>` → review → `/ml-specs:spec-advance … Approved` →
+Then use the loop: `/ml-specs:spec-explore` (optional) → `/ml-specs:spec <ticket>` → review → `/ml-specs:spec-advance … Approved` →
 `/ml-specs:spec-build specs/NNNN-*.md` → `/ml-specs:spec-verify` + `/code-review` → `/ml-specs:spec-advance … Verified` → `/ml-specs:pr`.
+
+## Going faster on an existing app
+
+The install and the loop above are the mechanics. This is how teams actually get shorter cycle
+times out of them.
+
+**1. Teach the repo first — this is where the speed comes from.** Run `/ml-specs:repo-init` once per
+repo. Without the learned knowledge layer every session re-derives your stack, conventions and
+layout from scratch — slow, and it guesses wrong. With it the agent loads the *least* context that
+answers the task, and matches your existing style on the first attempt instead of the third. Keep it
+honest with `/ml-specs:repo-refresh` after structural changes, and `/ml-specs:repo-doctor` to spot
+drift.
+
+**2. Pick the right lane — don't spec everything.**
+
+| Change | Use |
+|---|---|
+| One-liner, obvious edit | `/ml-specs:code` |
+| A bug | `/ml-specs:fix` — reproduces with a failing test first, then the smallest change that turns it green |
+| Touches an interface, several files, or a contract | the full spec loop |
+
+Most of the time lost to this toolkit is lost by running the heavy loop on trivial work, or by
+skipping it on work that then gets rewritten twice.
+
+**3. Review the spec, not just the diff.** `/ml-specs:spec-review` runs before any code exists. The
+slow part of agent-assisted development isn't generating code, it's discovering halfway through that
+the wrong thing got built — and a spec review catches that while it's still a paragraph to edit
+rather than a branch to throw away.
+
+**4. Then parallelise.**
+
+- `/ml-specs:spec-fanout` — one spec, N repos, N PRs, all carrying the same key. The big one when a
+  contract change lands across several services at once.
+- `/ml-specs:repo-impact` — who breaks if this ships, answered before it ships.
+- Several `developer` agents at once, one approved spec each, isolated in its own git worktree.
+- `/ml-specs:repo-rollout` — onboard an estate in reviewed waves rather than repo by repo.
+
+**Starting point.** Pick your least critical repo, run `/ml-specs:repo-init`, and take one small real
+ticket through the loop end to end. You'll see where the gates earn their keep and where they're
+overhead for your team, before committing the estate to it.
+
+## Opting out of architecture standards
+
+Some of the toolkit integrates with [`ml-skills`](https://www.npmjs.com/package/@mlmcps/ml-skills):
+`/ml-specs:spec-verify` reports an architecture-standards verdict, and `/ml-specs:spec-advance`
+records it on the `Verified` gate. In a repo that does not use it, every review ends with
+`standards: unavailable` — technically honest, and pure noise once you have read it the tenth time.
+
+Put a `.ml-specs.json` at the repo root to say so once:
+
+```json
+{ "mlSkills": "off" }
+```
+
+| Value | Behaviour |
+|---|---|
+| `off` | The check is out of scope. It is not run, and its absence is **not** reported in review output. `/ml-specs:spec-advance` still records one line in the transition note, so an archived spec never leaves a reader unable to tell "checked, clean" from "opted out". |
+| `auto` | The default when the file is absent — run `ml-skills` if it is installed, report honestly when it is not. |
+
+Anything else — a missing key, unreadable JSON, an unrecognised value — means `auto`. The flag
+fails **open**: a typo must never silently disable a gate.
+
+This is a second, explicit gate on top of the existing one: the standards check only ever runs
+when the repo also has a `.mlskills.json`. `off` is reversible at any time — change the value, and
+the next review reports standards again.
 
 ## Updating
 

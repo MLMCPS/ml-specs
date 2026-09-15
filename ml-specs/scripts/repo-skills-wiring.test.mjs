@@ -111,12 +111,12 @@ describe('/repo-skills wiring', () => {
     assert.match(command, /(?:\/|\/ml-specs:)(?:repo-doctor|repo-refresh)/, 'a command in the loop names the next one');
   });
 
-  test('spec 0005 introduces no agent', () => {
+  test('the agent roster matches disk', () => {
     // A deepEqual roster, not a count: it catches an addition, a removal and a rename.
     assert.deepEqual(readdirSync(join(PLUGIN, 'agents')).filter((f) => f.endsWith('.md')).sort(), [
-      'coder.md', 'developer.md', 'pr-author.md', 'reviewer.md', 'scanner.md',
-      'security-reviewer.md', 'spec-author.md', 'spec-reviewer.md',
-    ], 'the command reuses scanner — it must not grow the agent roster');
+      'analyst.md', 'coder.md', 'developer.md', 'explainer.md', 'pr-author.md', 'reviewer.md',
+      'scanner.md', 'security-reviewer.md', 'spec-author.md', 'spec-reviewer.md',
+    ], 'the agent roster drifted from ml-specs/agents/');
   });
 
   // --- the template ---------------------------------------------------------
