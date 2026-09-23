@@ -1,15 +1,19 @@
-<!--
-  Seed file for the PUBLIC mirror repo (MLMCPS/sdd-toolkit). Copy this in as that repo's
-  README.md once, by hand. The release workflow replaces only .claude-plugin/, sdd-toolkit/
-  and LICENSE, so this file survives every mirror push and is safe to edit there.
+# ml-specs
 
-  This file lives under .github/ so it ships in neither npm package.
--->
-
-# sdd-toolkit
+<p>
+  <a href="https://www.npmjs.com/package/@mlmcps/ml-specs"><img src="https://img.shields.io/npm/v/@mlmcps/ml-specs.svg?color=e6a54b" alt="npm version"></a>
+  <img src="https://img.shields.io/badge/node-%3E%3D22-5fb2cc" alt="node >= 22">
+  <img src="https://img.shields.io/badge/dependencies-0-4caf72" alt="zero dependencies">
+  <a href="./LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT license"></a>
+</p>
 
 A Claude Code plugin for spec-driven development in any stack — a stack-aware coding agent, an
-evidence-gated spec lifecycle, and a knowledge layer that stays honest about drift.
+evidence-gated spec lifecycle, and a knowledge layer that stays honest about drift. 29 commands,
+10 agents, 1 skill, four hooks that are active on install, and a read-only MCP server.
+
+Every lifecycle transition is decided by a script rather than a prompt, and leaves an **evidence
+record** behind — so a `Verified` that has stopped being true can say so, instead of staying
+`Verified` because nobody looked.
 
 **This repository is generated.** It is a release mirror of a private development repo, carrying
 the plugin and its marketplace manifest and nothing else. Issues and pull requests here will not be
@@ -18,58 +22,60 @@ seen — it is pushed to, never merged into.
 ## Install
 
 ```
-/plugin marketplace add MLMCPS/sdd-toolkit
-/plugin install sdd-toolkit@ace-tools
+/plugin marketplace add MLMCPS/ml-specs
+/plugin install ml-specs@ml-tools
 ```
 
-Restart Claude Code, then type `/sdd-` to confirm the commands are there.
+Restart Claude Code, then type `/ml-specs:spec` or `/ml-specs:repo-` to confirm the commands are there.
 
 To enable it for everyone who clones a repo, commit this as `.claude/settings.json` in that repo:
 
 ```json
 {
   "extraKnownMarketplaces": {
-    "ace-tools": {
-      "source": { "source": "github", "repo": "MLMCPS/sdd-toolkit" },
+    "ml-tools": {
+      "source": { "source": "github", "repo": "MLMCPS/ml-specs" },
       "autoUpdate": true
     }
   },
-  "enabledPlugins": { "sdd-toolkit@ace-tools": true }
+  "enabledPlugins": { "ml-specs@ml-tools": true }
 }
 ```
 
 ## Start here
 
-`/sdd-init` in an existing repo. It reads the codebase and writes `CLAUDE.md`, `docs/PATTERNS.md`,
+`/ml-specs:repo-init` in an existing repo. It reads the codebase and writes `CLAUDE.md`, `docs/PATTERNS.md`,
 `docs/ARCHITECTURE.md`, and `specs/` from what is actually there. Everything else assumes those
 exist. Then the loop:
 
 ```
-/spec <ticket> → /spec-review → /spec-advance … Approved
-              → /spec-build → /spec-verify → /spec-advance … Verified
-              → /pr → merge → /spec-advance … Archived
+/ml-specs:spec-explore (optional) → /ml-specs:spec <ticket> → /ml-specs:spec-review
+                                  → /ml-specs:spec-advance … Approved → /ml-specs:spec-build
+                                  → /ml-specs:spec-verify → /ml-specs:spec-advance … Verified
+                                  → /ml-specs:pr → merge → /ml-specs:spec-advance … Archived
 ```
 
-`/code` and `/fix` are the short paths for changes that don't warrant a spec.
+`/ml-specs:code` and `/ml-specs:fix` are the short paths for changes that don't warrant a spec.
 
-Full documentation: [`sdd-toolkit/README.md`](sdd-toolkit/README.md) ·
-changes: [`sdd-toolkit/CHANGELOG.md`](sdd-toolkit/CHANGELOG.md)
+Full documentation: [`ml-specs/README.md`](ml-specs/README.md) ·
+changes: [`ml-specs/CHANGELOG.md`](ml-specs/CHANGELOG.md)
 
 ## Also on npm
 
 | Package | For |
 |---|---|
-| [`@mlmcps/sdd-mcp`](https://www.npmjs.com/package/@mlmcps/sdd-mcp) | The read-only MCP server — Cursor, VS Code, CI, custom agents. Four tools, zero dependencies. |
-| [`@mlmcps/sdd-toolkit`](https://www.npmjs.com/package/@mlmcps/sdd-toolkit) | This plugin as an npm package, for vendored or air-gapped installs. |
+| [`@mlmcps/ml-specs-mcp`](https://www.npmjs.com/package/@mlmcps/ml-specs-mcp) | The read-only MCP server — Cursor, VS Code, CI, custom agents. Ten tools, zero dependencies. |
+| [`@mlmcps/ml-specs`](https://www.npmjs.com/package/@mlmcps/ml-specs) | This plugin as an npm package, for vendored or air-gapped installs — **and the `bin` that installs the loop into 16 other agent hosts**: `npx @mlmcps/ml-specs hosts`, then `install --host <id\|all>`. |
 
-Claude Code users need neither — the MCP server is bundled inside the plugin and updates with it.
+Claude Code users need neither for the plugin itself — the MCP server is bundled inside it and
+updates with it. The `bin` is for the hosts that are not Claude Code.
 
 ```json
 {
   "mcpServers": {
-    "sdd-toolkit": {
+    "ml-specs": {
       "command": "npx",
-      "args": ["-y", "@mlmcps/sdd-mcp", "--root", "."]
+      "args": ["-y", "@mlmcps/ml-specs-mcp", "--root", "."]
     }
   }
 }
