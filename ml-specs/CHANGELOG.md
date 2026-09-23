@@ -9,6 +9,27 @@ rather than bumping by hand.
 
 Entries before 1.0.0 refer to this plugin under its former name, `sdd-toolkit`.
 
+## [1.3.1]
+
+### Fixed
+- **The npm page for `@mlmcps/ml-specs` was the development repo's landing page.** `files[]` is
+  `.claude-plugin/` and `ml-specs/`, and npm adds the root `README.md` on top of whatever `files[]`
+  lists — so the page on npmjs.com opened "Development repo for a Claude Code plugin marketplace",
+  told the reader "This repo is private", documented the maintainers' `/release` command and the
+  development layout, and linked to two files that are not in the tarball. Both links 404'd.
+
+  It now reads for the person who arrives from npm: what the toolkit is, what the plugin gives you,
+  and the three install paths — the marketplace on Claude Code, the `bin` for the other sixteen
+  hosts, and `@mlmcps/ml-specs-mcp` for MCP clients. It states plainly that **this package is not
+  how you install on Claude Code**, which is the mistake the old page invited: the client has no
+  `npm` marketplace source, so the package is inert there. Every remaining link resolves inside the
+  published tarball.
+
+  `files[]` is unchanged. Nothing new is published and nothing stops being.
+
+### Changed
+- The plugin README no longer carries a prior-art section.
+
 ## [1.3.0]
 
 ### Added

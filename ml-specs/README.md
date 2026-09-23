@@ -635,30 +635,6 @@ should not have to find five sections to learn them.
   stale summary is worse than none — which is why `/ml-specs:repo-refresh` and
   `/ml-specs:repo-doctor` exist and why absence is reported as "not in use" rather than as a gap.
 
-## Studied, not copied
-
-Two of the ideas in this toolkit came from reading other people's work carefully, and it would be
-poor form not to say so. Both are MIT-licensed and worth knowing in their own right.
-
-- **[`sdd-agentic-flow`](https://github.com/gmartins-dev/sdd-agentic-flow)** (SAF) by gmartins-dev
-  — a dimension-by-dimension comparison of its IMPLEMENT phase against this one found six
-  capabilities it had and this toolkit did not. `specs/0018-saf-borrowings-implement-phase.md`
-  closes them and is named after the debt. The `Rigor` row, resuming an interrupted build from a
-  handoff note, and `docs/GLOSSARY.md` as a place for domain vocabulary all start there. Its
-  separation of *capability* from *the procedure a role runs* is also what
-  `/ml-specs:repo-skill` is built on.
-- **[`spectoflow`](https://github.com/georgesmomo/spectoflow)** by Georges MOMO — the thin
-  per-host adapter pattern: one canonical document, and a small native entry file per agent host
-  pointing back at it, rather than sixteen divergent copies. That is the shape of
-  `ML-SPECS.template.md` and `ml-specs install --host`.
-
-What this toolkit does differently is narrower and duller on purpose: **the gates are scripts, not
-prose.** A lifecycle transition is decided by `spec-advance.mjs`, which refuses on a `FAIL` and
-leaves an evidence record behind, so a status that has stopped being true can say so. Where those
-projects are broader, this one is more willing to refuse.
-
-If you are evaluating this, both of those are worth your time too.
-
 ## Updating
 
 Consumers: repos with `autoUpdate: true` pick up a new version on the next launch; everyone else
