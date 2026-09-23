@@ -17,6 +17,12 @@ Steps:
    `docs/SKILLS.md`, `specs/README.md`, `specs/TEMPLATE.md`. If none exist, report that and
    recommend `/ml-specs:repo-init`, then stop.
 
+   `docs/GLOSSARY.md` and `docs/CONTEXT.md` are **optional**, and a repo with neither is healthy —
+   say "not in use" and move on rather than reporting a gap, which would fire on every correctly
+   configured repo. Where they exist: check the glossary's terms still appear in the code, and
+   that `CONTEXT.md` has not drifted into repeating `CLAUDE.md` — the division is that `CLAUDE.md`
+   points and `CONTEXT.md` explains, and a copy in either direction is the risk this pair carries.
+
    `docs/SKILLS.md` is **optional** — it only exists where `ml-skills` is installed. Its absence
    is not drift; report it as "not in use" and move on. Where it does exist, check that the
    technologies it claims to match still appear in the stack, and that `CLAUDE.md` points at it in
@@ -53,7 +59,34 @@ Steps:
    - A blocking contract question parked in section 8 (an answer that would change an API shape,
      data model, error code, scope, or compatibility) — that spec isn't approvable as written.
 
-7. **`(inferred)` vs reality spot-check.** Pick 2–3 of the most load-bearing claims in
+7. **Evidence that no longer stands.** Run it rather than re-deriving it:
+
+   ```
+   node ${CLAUDE_PLUGIN_ROOT}/scripts/spec-evidence.mjs --failing
+   ```
+
+   Every transition `/ml-specs:spec-advance` allows leaves a record of what the gate read. This
+   asks whether those records still describe the repository, and exits 1 when any does not. The
+   three failing verdicts are different problems and want different answers — do not collapse
+   them into "re-run the gate":
+
+   - **stale** — a file the gate read has changed. Re-run the gate for the status that spec still
+     holds: `node ${CLAUDE_PLUGIN_ROOT}/scripts/spec-advance.mjs <spec> --re-record --attest "…"`.
+     It re-gates in full and refuses on any FAIL, and it does not touch the `Status` cell. (A record
+     for a status the spec has moved PAST reads `superseded`, not `stale`, and is history rather
+     than a finding — do not send anyone to re-record one.)
+   - **amended** — the SPEC moved after it passed: a criterion reworded or removed, or a §6 row
+     repointed. Decide whether that was intended *before* re-running anything; a gate re-run
+     against a softened criterion is the thing the record exists to catch.
+   - **unsound** — the record was edited after it was written. Records are not to be edited;
+     re-run the gate, and mention it, because nothing else in the repo will.
+
+   `unknown` is not a failure and must not be reported as one — a record that cannot be judged
+   has not been shown wrong. Nor is `superseded`: the spec has moved past that status, so the
+   record is history and nobody is asking it whether it still describes the tree. A spec with no
+   record at all predates this and is not a finding.
+
+8. **`(inferred)` vs reality spot-check.** Pick 2–3 of the most load-bearing claims in
    `docs/PATTERNS.md` / `docs/ARCHITECTURE.md` and verify them against the code. Report matches and
    mismatches.
 

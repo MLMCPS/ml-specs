@@ -76,3 +76,25 @@ Next step:
   because nobody knows whether there is one.
 - **Not clean** → fix, then re-run `/ml-specs:spec-verify <spec-file>`. Do not advance the spec's status and
   do not open a PR on a failing verdict.
+
+**Then offer those steps as actions.** Put them to the user with the AskUserQuestion tool —
+`header: "Next step"`, `multiSelect: false`, one option per concrete command below, the one you
+recommend **first** and its label suffixed `(Recommended)`, with the *why* and the cost in its
+description. Offer the branch the verdict actually took, never both:
+
+- **Clean** → `/ml-specs:spec-advance <spec-file> Verified` **(Recommended)** — records the
+  transition against the gate · `/code-review` — the diff-level question this review did not ask;
+  run it before merge if you have not · `/ml-specs:pr <spec-file>` — the PR text.
+- **Not clean** → `/ml-specs:spec-build <spec-file>` **(Recommended)** — fix the must-fix list, the
+  cheapest thing to do with a failing verdict · `/ml-specs:spec-verify <spec-file>` — re-run this
+  review once the fixes land.
+
+A **spec gap** is not one of these options. It is a contract change, and it goes to the user as the
+blocking decision above — which then *is* the close.
+
+**Navigation, not consent** — never offer a step already ruled out, and never ask permission for
+something this command should simply do. **No double question:** if this run already stopped on a
+blocking decision and that is the last thing the user answered, that decision *is* the close — name
+the next step in prose and stop. **Only a command asks, never an agent** — a subagent has no
+channel to the human. The prose next-step line stays either way: it is what the transcript keeps
+and all a non-interactive run emits.

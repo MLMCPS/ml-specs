@@ -10,6 +10,8 @@
 // spec, and a blocking pipeline gate. `compile` produces both or throws, so an
 // NFR cannot be admitted and then quietly lost.
 
+import { lines } from './text.mjs';
+
 const TOOL_FOR = {
   performance: 'load',
   security: 'sast',
@@ -86,7 +88,7 @@ const PLACEHOLDER = /^(<.*>|_TBD_|—|-|)$/;
 export function parseNfrMarkdown(text) {
   const out = [];
   let header = null;
-  for (const line of text.split('\n')) {
+  for (const line of lines(text)) {
     const trimmed = line.trim();
     if (SEP.test(trimmed)) continue;
     const m = ROW.exec(trimmed);

@@ -1,0 +1,25 @@
+{
+  "command": "spec-build",
+  "why": "IMPLEMENT works against an APPROVED spec. Building a Draft is how a contract nobody agreed gets implemented.",
+  "cases": [
+    {
+      "name": "refuses to build a Draft, and writes nothing",
+      "given": {
+        "files": {
+          "specs/0001-thing.md": "# Spec: a thing\n\n| | |\n|---|---|\n| **Status** | Draft |\n| **Branch** | feat/thing |\n| **Author** | Ada |\n\n## 5. Acceptance criteria\n- [ ] **AC1** \u2014 it validates the token.\n\n## 6. Test plan\n| AC | Test file | What it proves |\n|---|---|---|\n| AC1 | `test/thing.test.mjs` | it validates |\n\n## 8. Open questions\nNone blocking.\n"
+        }
+      },
+      "invoke": "/ml-specs:spec-build specs/0001-thing.md",
+      "expect": [
+        {
+          "unchanged": "specs/0001-thing.md",
+          "why": "a build must not advance the status it is gated on"
+        },
+        {
+          "absent": "src",
+          "why": "no implementation against an unapproved contract"
+        }
+      ]
+    }
+  ]
+}

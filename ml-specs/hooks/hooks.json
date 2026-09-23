@@ -2,7 +2,8 @@
   "//": "Hooks that ship with ml-specs and activate on install. Only universal, fast,",
   "//1": "project-agnostic automation belongs here — everything that needs THIS project's real",
   "//2": "commands (format, lint, test) stays opt-in in templates/hooks/settings.hooks.example.json.",
-  "//3": "knowledge-drift is silent unless there is drift; handoff-notice unless a handoff is waiting; secret-scan is the only one that blocks.",
+  "//3": "knowledge-drift is silent unless there is drift; handoff-notice unless a handoff is waiting. secret-scan and scope-guard are the two that can block.",
+  "//4": "scope-guard refuses a write outside the active spec's Touches row. It fails open: no active spec, no Touches, no node — all allow, and say so.",
   "hooks": {
     "SessionStart": [
       {
@@ -17,6 +18,12 @@
         "matcher": "Bash",
         "hooks": [
           { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/secret-scan.sh" }
+        ]
+      },
+      {
+        "matcher": "Write|Edit|MultiEdit|NotebookEdit|Bash",
+        "hooks": [
+          { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scope-guard.sh" }
         ]
       }
     ]

@@ -19,6 +19,7 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
+import { readConfig } from './lib/config.mjs';
 import { existsSync, readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -41,6 +42,28 @@ describe('.ml-specs.json — the architecture-standards opt-out', () => {
     assert.ok('mlSkills' in cfg, 'mlSkills key is absent');
     assert.ok(VALID.includes(cfg.mlSkills),
       `mlSkills is ${JSON.stringify(cfg.mlSkills)}; expected one of ${VALID.join(' | ')}`);
+  });
+
+  test('hosts, if present, is an array of strings — spec 0028', () => {
+    // A second key, and the reason this test rather than a new one owns it: this file is where
+    // `.ml-specs.json`'s shape is pinned, and a parallel convention in `lib/config.test.mjs` would
+    // let the two drift. That file owns the PARSER's behaviour; this one owns THIS repo's file.
+    //
+    // `if present` is deliberate. The key is written by `ml-specs install`, and this repo installs
+    // no shims into itself — Claude Code is served by the plugin. Requiring it would make the
+    // honest absence a failure.
+    // Two failed attempts at this one are worth recording. First an early `return` on the absent
+    // key — and absent is the PERMANENT state here, since this repo installs no shims into
+    // itself, so the body never ran. Then an assertion in front of that return which was a
+    // tautology: `!('hosts' in cfg)` already guarantees no `hosts` key is in `Object.keys(cfg)`.
+    //
+    // What can actually fail is what the real parser makes of this repo's real file. Both halves
+    // go red on a change that matters: a stray `hosts` key, or a lost `mlSkills`.
+    const cfg = readConfig(ROOT);
+    assert.deepEqual(cfg.hosts, [],
+      `readConfig sees hosts=${JSON.stringify(cfg.hosts)} — this repo installs no shims into itself`);
+    assert.equal(cfg.mlSkills, 'off',
+      'the parser no longer reads this repo\'s own mlSkills opt-out as off');
   });
 
   test('is tracked by git', () => {

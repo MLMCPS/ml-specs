@@ -52,7 +52,7 @@ Two behaviours worth knowing, because both are deliberate:
 
 Templates are also served as resources under `mlspec://templates/…`.
 
-Second, the **commands**, served as MCP prompts — all 22 of them, described from their own
+Second, the **commands**, served as MCP prompts — all 29 of them, described from their own
 frontmatter, with `$ARGUMENTS` filled in at `prompts/get`. Clients namespace these, so `spec`
 arrives as `/mcp__ml-specs__spec` rather than `/ml-specs:spec`; that is the client's doing, not a choice
 made here.
@@ -86,7 +86,7 @@ pick based on what you're actually solving:
 
 | Goal | Do this | Cost |
 |---|---|---|
-| Teammates get **only these nine tools** | `@mlmcps/ml-specs-mcp` npm package (below) | Public on npmjs — anyone can read the package source |
+| Teammates get **only these ten tools** | `@mlmcps/ml-specs-mcp` npm package (below) | Public on npmjs — anyone can read the package source |
 | Teammates get the **whole toolkit**, without repo access | `@mlmcps/ml-specs` npm package as the marketplace source | Public on npmjs; updates arrive on tag, not on merge |
 | Teammates get the whole toolkit **and** the repo | Private repo + `/plugin marketplace add` | They can clone everything, history included |
 | Genuinely no readable source | Single executable (`node --experimental-sea-config`, `bun build --compile`) | Per-platform builds; unpackable anyway |
@@ -132,7 +132,7 @@ commit it — project-scoped config, so the whole team gets it. Or register it p
 claude mcp add ml-specs -- node /abs/path/to/ml-specs/mcp/ml-specs-server.mjs --root .
 ```
 
-Verify with `/mcp` in Claude Code; the nine tools should be listed.
+Verify with `/mcp` in Claude Code; the ten tools should be listed.
 
 ## How updates reach people
 

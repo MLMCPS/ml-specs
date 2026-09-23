@@ -167,14 +167,27 @@ describe('the repo validator knows the new agent', () => {
     assert.deepEqual(offending, []);
   });
 
-  test('no new validator warning', () => {
-    // AC8. Warnings go to stdout. Exactly one is expected and standing: spec-author,
-    // which declares its entry point with an <!-- invoked-by: --> comment. A second
-    // one means this change made the gate noisier, and a noisy gate gets ignored.
+  test('the default run stays quiet', () => {
+    // AC8, and the rule it encodes is the one that matters: a noisy gate gets ignored.
+    //
+    // TWO standing warnings now, not one. `spec-author` declares its entry point with an
+    // `<!-- invoked-by: -->` comment, and spec 0051's prompt-shape check adds a single SUMMARY
+    // line. That second one was seventeen separate lines when first wired in — which is the
+    // cry-wolf failure specs 0005 §7 and 0010 §4 record — so it collapses to a count plus the
+    // command that lists them. The assertion below is what keeps it collapsed: if somebody
+    // un-summarises it, this goes red rather than the output quietly growing.
     const r = runValidator();
     const warningLines = r.stdout.split('\n').filter((l) => /^\s*warning\s/.test(l));
-    assert.equal(warningLines.length, 1, `unexpected warnings:\n${warningLines.join('\n')}`);
-    assert.match(warningLines[0], /spec-author/);
+    // Three standing: spec-author's declared entry point, the prompt-shape summary (0051), and
+    // the uncovered-capabilities count (0059). Each is ONE line and each names the command that
+    // expands it — which is the property this test exists to hold.
+    assert.equal(warningLines.length, 3, `unexpected warnings:\n${warningLines.join('\n')}`);
+    assert.ok(warningLines.some((l) => /spec-author/.test(l)), 'the standing warning is gone');
+
+    const shape = warningLines.find((l) => /prompt shape/.test(l));
+    assert.ok(shape, 'the prompt-shape summary is gone');
+    assert.match(shape, /soft finding\(s\)/, 'the summary became a per-file list');
+    assert.match(shape, /--prompts/, 'the summary does not say how to list them');
   });
 
   test('the typo guard fires for security-reviewer (fixture)', () => {
@@ -200,8 +213,15 @@ describe('the repo validator knows the new agent', () => {
       mkdirSync(join(dir, 'ml-specs', 'commands'), { recursive: true });
       copyFileSync(VALIDATOR, join(dir, 'scripts', 'validate-plugin.mjs'));
       mkdirSync(join(dir, 'ml-specs', 'scripts', 'lib'), { recursive: true });
-      copyFileSync(join(ROOT, 'ml-specs', 'scripts', 'lib', 'file-identity.mjs'),
-        join(dir, 'ml-specs', 'scripts', 'lib', 'file-identity.mjs'));
+      // The validator's `lib/` closure, whole. It was one file; spec 0051 made it three
+      // (`prompt-shape.mjs` → `text.mjs`), and a per-file list breaks every harness the next time
+      // it grows.
+      for (const f of readdirSync(join(ROOT, 'ml-specs', 'scripts', 'lib'))) {
+        if (f.endsWith('.mjs') && !f.endsWith('.test.mjs')) {
+          copyFileSync(join(ROOT, 'ml-specs', 'scripts', 'lib', f),
+            join(dir, 'ml-specs', 'scripts', 'lib', f));
+        }
+      }
       writeFileSync(
         join(dir, 'ml-specs', 'commands', 'spec-verify.md'),
         '---\ndescription: fixture\nargument-hint: <spec>\n---\n\nUse the **security-reviewer** agent.\n',
@@ -314,8 +334,13 @@ describe('check 13 — byte-identical copies', () => {
       mkdirSync(join(dir, 'scripts'), { recursive: true });
       copyFileSync(VALIDATOR, join(dir, 'scripts', 'validate-plugin.mjs'));
       mkdirSync(join(dir, 'ml-specs', 'scripts', 'lib'), { recursive: true });
-      copyFileSync(join(ROOT, 'ml-specs', 'scripts', 'lib', 'file-identity.mjs'),
-        join(dir, 'ml-specs', 'scripts', 'lib', 'file-identity.mjs'));
+      // The validator's `lib/` closure, whole — it grew from one file to three in spec 0051.
+      for (const f of readdirSync(join(ROOT, 'ml-specs', 'scripts', 'lib'))) {
+        if (f.endsWith('.mjs') && !f.endsWith('.test.mjs')) {
+          copyFileSync(join(ROOT, 'ml-specs', 'scripts', 'lib', f),
+            join(dir, 'ml-specs', 'scripts', 'lib', f));
+        }
+      }
       for (const [rel, body] of [[TEMPLATE, template], [CI_COPY, ciCopy]]) {
         if (body === null) continue;             // null means "this side is missing"
         mkdirSync(dirname(join(dir, rel)), { recursive: true });
@@ -347,5 +372,76 @@ describe('check 13 — byte-identical copies', () => {
   test('a missing side is reported, not silently skipped', () => {
     const out = runWithCopies({ template: 'same\n', ciCopy: null });
     assert.match(out, /one of the two is missing/, `missing-side branch did not fire; output was:\n${out}`);
+  });
+});
+
+// ── the rule the lifecycle rests on ─────────────────────────────────────────────────────────
+
+describe('only the status writer writes a status', () => {
+  /** The validator, in a throwaway tree, with whatever scripts a case wants to plant. */
+  const runAgainst = (t, scripts) => {
+    const dir = mkdtempSync(join(tmpdir(), 'sdd-status-'));
+    t.after(() => rmSync(dir, { recursive: true, force: true }));
+    mkdirSync(join(dir, 'scripts'), { recursive: true });
+    mkdirSync(join(dir, 'ml-specs', 'scripts', 'lib'), { recursive: true });
+    mkdirSync(join(dir, 'ml-specs', 'agents'), { recursive: true });
+    mkdirSync(join(dir, 'ml-specs', 'commands'), { recursive: true });
+    copyFileSync(VALIDATOR, join(dir, 'scripts', 'validate-plugin.mjs'));
+    // The validator's `lib/` closure, whole — it grew from one file to three in spec 0051.
+    for (const f of readdirSync(join(ROOT, 'ml-specs', 'scripts', 'lib'))) {
+      if (f.endsWith('.mjs') && !f.endsWith('.test.mjs')) {
+        copyFileSync(join(ROOT, 'ml-specs', 'scripts', 'lib', f),
+          join(dir, 'ml-specs', 'scripts', 'lib', f));
+      }
+    }
+    for (const [name, text] of Object.entries(scripts)) {
+      writeFileSync(join(dir, 'ml-specs', 'scripts', name), text);
+    }
+    try {
+      return execFileSync('node', [join(dir, 'scripts', 'validate-plugin.mjs')],
+        { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+    } catch (e) {
+      return `${e.stdout ?? ''}${e.stderr ?? ''}`;
+    }
+  };
+
+  // The declared writers have to exist in the fixture, or the stale-exemption check fires and
+  // every case reports the wrong error.
+  const DECLARED = {
+    'spec-advance.mjs': "import { writeFileSync } from 'node:fs';\nwriteFileSync(specPath, t.replace('| **Status** | Draft |', 'x'));\n",
+    'fix-specs.mjs': "import { writeFileSync } from 'node:fs';\nwriteFileSync(abs(change.file), lines.join('\\n')); // **Status**\n",
+  };
+
+  test('SENSOR: a new script that rewrites a Status cell is refused', (t) => {
+    // Eight lines is all it takes to walk around the gate, the attestation and the evidence
+    // record, and every other check in the validator reports the package well-formed. The
+    // command's own prompt has always claimed to be "the only command that writes a spec's
+    // Status"; until this, that sentence had nothing behind it at the package level.
+    const out = runAgainst(t, {
+      ...DECLARED,
+      'spec-ship.mjs': "import { readFileSync, writeFileSync } from 'node:fs';\n"
+        + "const specFile = process.argv[2];\n"
+        + "writeFileSync(specFile, readFileSync(specFile, 'utf8').replace(/\\| \\*\\*Status\\*\\* \\| \\w+ \\|/, '| **Status** | Verified |'));\n",
+    });
+    assert.match(out, /spec-ship\.mjs: writes a spec's Status/);
+    assert.match(out, /only spec-advance\.mjs, fix-specs\.mjs may/, 'the refusal must name who may');
+  });
+
+  test('a script that READS a Status is not a writer', (t) => {
+    // Every script here reads `**Status**`. Flagging those would make the check useless on its
+    // first run, and a check that fires on everything gets deleted.
+    const out = runAgainst(t, {
+      ...DECLARED,
+      'spec-report.mjs': "import { readFileSync, writeFileSync } from 'node:fs';\n"
+        + "const status = readFileSync(f, 'utf8').match(/\\*\\*Status\\*\\* \\| (\\w+)/)[1];\n"
+        + "writeFileSync(outHtml, `<p>${status}</p>`);\n",
+    });
+    assert.doesNotMatch(out, /spec-report\.mjs: writes a spec's Status/);
+  });
+
+  test('a declared writer that no longer exists is a stale exemption', (t) => {
+    // An exemption outliving the file it excused sits there to excuse whatever takes its name.
+    const out = runAgainst(t, { 'spec-advance.mjs': DECLARED['spec-advance.mjs'] });
+    assert.match(out, /STATUS_WRITERS names fix-specs\.mjs, which no longer exists/);
   });
 });

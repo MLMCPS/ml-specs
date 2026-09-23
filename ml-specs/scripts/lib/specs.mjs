@@ -6,8 +6,18 @@
 
 import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
+import { lines } from './text.mjs';
 
 export const LIFECYCLE = ['Draft', 'Approved', 'Implemented', 'Verified', 'Archived'];
+
+/** How much ceremony a spec gets. It scales ceremony; it never lowers the seam floor. */
+export const RIGOR = ['light', 'standard', 'deep'];
+
+/** Anything this does not recognise is `standard` — the safe direction. */
+export function rigorOf(value) {
+  const v = String(value ?? '').replace(/[`*]/g, '').trim().toLowerCase();
+  return RIGOR.includes(v) ? v : 'standard';
+}
 
 // `- [ ] **AC1** — text`, and the plainer `- [ ] AC-1: text`. Both appear in the
 // wild: the template writes the first, people hand-write the second.
@@ -31,12 +41,40 @@ export function parseCriteria(text) {
 // a real repo would fan a pull request out to a repository that does not exist.
 const PLACEHOLDER = /^(<.*>|_TBD_|—|-|n\/?a|none|tbd)$/i;
 
-/** A comma- or slash-separated header cell as a clean list. */
+/**
+ * A comma- or slash-separated header cell as a clean list.
+ *
+ * The slash is for `Project / service` — `ace-claude-plugins / ml-specs` is two names, not one.
+ * It also means this SHREDS any path handed to it: `src/billing/` becomes `src` and `billing`,
+ * and a scope bound of `src` is not the one anybody declared. Path-shaped cells use
+ * `splitPaths` below; this is why that function exists rather than reusing this one.
+ */
 export function splitCell(value) {
   if (!value) return [];
   return value
     .split(/[,/]/)
     .map((v) => v.replace(/[`*]/g, '').trim())
+    .filter((v) => v && !PLACEHOLDER.test(v));
+}
+
+/**
+ * A path cell as a clean list.
+ *
+ * Comma-separated ONLY. `splitCell` above splits on `/` as well, which is right for
+ * `ace-claude-plugins / ml-specs` and shreds every path it is handed — `src/billing/` would
+ * become `src` and `billing`, and a scope bound of `src` is not the one anybody declared.
+ */
+export function splitPaths(value) {
+  if (!value) return [];
+  // The WHOLE cell, before splitting. The template's own text contains commas, so splitting
+  // first leaves fragments that match no placeholder pattern and read as real paths — which
+  // would give an unfilled spec a bogus scope bound and make the guard refuse everything. A
+  // guard that blocks a file you can see is in scope is a guard somebody switches off.
+  const whole = String(value).replace(/[`*]/g, '').trim();
+  if (!whole || PLACEHOLDER.test(whole) || (whole.startsWith('<') && whole.endsWith('>'))) return [];
+  return whole
+    .split(',')
+    .map((v) => v.replace(/[`*]/g, '').trim().replace(/\/+$/, ''))
     .filter((v) => v && !PLACEHOLDER.test(v));
 }
 
@@ -94,7 +132,7 @@ export function listSpecs(root = process.cwd()) {
       // Header-table cells: take to the LAST pipe on the line — the prose people write in
       // Status often contains pipes, and stopping at the first would silently truncate it.
       const field = (name) => {
-        const line = text.split('\n').find((l) =>
+        const line = lines(text).find((l) =>
           new RegExp(`^\\|\\s*\\*\\*${name}\\*\\*\\s*\\|`, 'i').test(l));
         if (!line) return null;
         const start = line.indexOf('|', line.indexOf(`**${name}**`)) + 1;
@@ -123,6 +161,11 @@ export function listSpecs(root = process.cwd()) {
         statusAmbiguous: resolved.ambiguous,   // several stage words present, none clearly leading
         statusCandidates: resolved.candidates,
         branch: field('Branch'),
+        // `standard` when absent, empty, `—` or unrecognised. Fail toward MORE rigor: a spec
+        // written before this row existed keeps today's behaviour, and a typo cannot silently
+        // weaken a suite. Never re-inferred from the diff — SAF found that re-inferring depth per
+        // invocation makes rigor drift between phases of the same feature.
+        rigor: rigorOf(field('Rigor')),
         ticket: field('Ticket'),
         acTotal: boxes.length,
         acChecked: boxes.filter((b) => b[1].toLowerCase() === 'x').length,
@@ -131,6 +174,8 @@ export function listSpecs(root = process.cwd()) {
         // untouched — the MCP server and the dashboard both read this shape.
         criteria,
         repos: splitCell(field('Project / service') ?? field('Project') ?? field('Repos')),
+        // What this spec may write. `[]` means unbounded, which is what an unfilled row says.
+        touches: splitPaths(field('Touches')),
         nfrs: splitCell(field('NFRs') ?? field('NFR')),
         approvedBy: field('Approved by') ?? field('Approver'),
         author: field('Author'),

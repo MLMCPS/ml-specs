@@ -24,6 +24,26 @@ Process:
 2. Explore the relevant part of the codebase to ground the spec in reality: current behavior,
    the affected module/component/bounded context, the data/API contracts it touches, and any
    events or cross-service/cross-module calls. Cite real `file:line` references.
+
+   **Name what kind of change this is, in §1, in a sentence** — `feature`, `bugfix`, `refactor`,
+   `investigation` or `maintenance`. It decides *what kind of truth the spec has to capture*, and it
+   is independent of size: a five-line change to an authorization check demands more of a spec than
+   a five-hundred-line CRUD screen. Put it in §1's prose; do not add a header row or a new section
+   for it.
+
+   Three of them change what §3 and §5 must contain:
+
+   - **`bugfix`** — at any size. §3 states the broken behavior and its root cause; §5 carries a
+     criterion whose test **fails on the current code** and passes after the fix, plus criteria for
+     the behavior that must stay unchanged. "Fixed" with no test that ever failed is not evidence of
+     a fix, and a fix with no regression criteria is a silent bet that nothing nearby depended on
+     the bug.
+   - **`refactor`** — §4 names the public seam and §5 asserts the external behavior is
+     **unchanged**. A refactor spec with no unchanged-behavior criteria cannot be distinguished from
+     a rewrite, by a reviewer or by a test.
+   - **`investigation`** — the deliverable is findings, not a change. It must not carry acceptance
+     criteria that claim something was fixed, and it is not a spec that can reach `Implemented`.
+     If the answer turns out to need a change, that is the *next* spec.
 3. **Read the architecture standards that govern this contract, before writing it.** If the
    `ml-skills` MCP server is available, call **`spec_standards`** with the spec path. It returns
    the section-to-standard routing and each governing standard's *decisions* table — the part you

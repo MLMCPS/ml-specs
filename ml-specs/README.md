@@ -6,6 +6,25 @@ project before editing and follow its conventions — Java/Spring (Maven/Gradle)
 Node backends (Express, NestJS), across MySQL, PostgreSQL, and MongoDB. (Originally built for
 a large microservice estate; works in standalone apps too.)
 
+**Zero dependencies. Node 22+ stdlib only. 29 commands, 10 agents, 1 skill, four hooks, ten MCP tools.**
+
+## Quick start
+
+```
+/plugin marketplace add MLMCPS/ml-specs
+/plugin install ml-specs@ml-tools
+```
+
+Restart Claude Code, then:
+
+```
+/ml-specs:repo-init      # learn this repo, scaffold specs/ + docs/ + the CI gate
+/ml-specs:next           # from here on: the one thing to do next, whenever you lose the thread
+```
+
+Not on Claude Code? `npx @mlmcps/ml-specs hosts`, then `install --host <id|all>` — see
+[Every other host](#every-other-host).
+
 ## Why use this (vs. just asking Claude)
 
 Same model — the difference is what's wrapped around it. Default Claude Code re-learns your repo
@@ -106,6 +125,13 @@ The loop: `/ml-specs:spec-explore` (optional) → `/ml-specs:spec` → `/ml-spec
 `/ml-specs:spec-advance Approved` → `/ml-specs:spec-build` → `/ml-specs:spec-verify` →
 `/ml-specs:spec-advance Verified` → `/ml-specs:pr` → `/ml-specs:spec-advance Archived`.
 
+- `/ml-specs:next [spec | --route "<what you want to do>"]` — the way **in**. With no argument it
+  reads the board and names the one thing to do next; with a sentence it names the command that
+  fits. Every answer carries the artifact it came from — a Status cell, or an evidence record — so
+  a wrong suggestion is arguable rather than mysterious, and a failing record outranks the
+  lifecycle: a `Verified` spec over a stale record is told to re-earn the claim, not to open a PR.
+  **Read-only and advisory.** It prints a command and never runs one; routing is navigation, never
+  consent.
 - `/ml-specs:code <task>` — make a one-shot change with the `coder` agent (any language; detects the stack).
 - `/ml-specs:fix <bug>` — the bug-shaped flow. A defect already has a contract; the code is just violating
   it, so a feature-shaped spec is wasted ceremony — but `/ml-specs:code` gives it no discipline at all. This
@@ -128,6 +154,11 @@ The loop: `/ml-specs:spec-explore` (optional) → `/ml-specs:spec` → `/ml-spec
   contract questions, and the command writes them to `specs/explore-<slug>.md`. `/ml-specs:spec`
   then consumes that note instead of re-deriving it — so the approaches you rejected are on the
   record rather than re-litigated in review. Skip it and the loop is unchanged.
+- `/ml-specs:spec-new [title]` — scaffold the next spec and stop. Takes the next free number
+  **across every branch** (not just this one, which is how two specs end up both called `0031`),
+  fills the header table, and leaves the body for you to write. It is not `/ml-specs:spec`: nothing
+  is drafted, nothing is asked, no agent runs. For when you already know what the spec says and
+  only want the file in the right place with the right number.
 - `/ml-specs:spec <ticket>` — draft a spec. Asks the blocking contract questions up front (batched, with
   recommendations), then self-reviews via `spec-reviewer` before handing you the draft — so your
   review is an approval, not a hole-hunt.
@@ -145,6 +176,13 @@ The loop: `/ml-specs:spec-explore` (optional) → `/ml-specs:spec` → `/ml-spec
   Also records the spec's branch so `/ml-specs:repo-status` stops guessing.
 - `/ml-specs:pr <spec-file>` — spec + diff → PR title and body with the acceptance criteria as a review
   checklist (produces text; doesn't push or open the PR unless you ask).
+- `/ml-specs:pr-address [pr]` — the step between "PR opened" and "PR merged": read an open PR's
+  review feedback, triage each comment, make the change with `coder`, then reply on each thread.
+  The **only** command that commits and pushes, and the gate is in the library rather than the
+  prose — it fetches the PR itself and refuses to claim anything about work that is not pushed.
+  A comment that would change a contract is **refused** and routed to `/ml-specs:spec`, so a
+  reviewer comment cannot bypass the loop. Replies are keyed on `(comment, updatedAt)`, so a
+  re-run answers nothing twice.
 - `/ml-specs:repo-estate` — build/refresh `docs/ESTATE.md`: scans the peer repos and indexes the real
   cross-service edges (HTTP/RPC clients, event producers/consumers, shared data), citing `file:line`
   on both sides and marking anything unconfirmed `(inferred)`. Read-only outside this repo.
@@ -188,6 +226,20 @@ The loop: `/ml-specs:spec-explore` (optional) → `/ml-specs:spec` → `/ml-spec
 - `/ml-specs:repo-doctor` — read-only health check of the knowledge layer (drift, broken refs, stale
   commands); recommends `/ml-specs:repo-refresh` when needed.
 - `/ml-specs:repo-status` — dashboard of every spec: lifecycle status, acceptance-criteria progress, branch.
+- `/ml-specs:repo-wiring` — **what this repo is actually wired for, and what is missing.** The CI
+  gate, the doc gate, the hooks, MCP, the knowledge layer — each row either present or absent, and
+  every absent row carries the one command that fixes it. A toolkit with sixteen moving parts has a
+  failure mode where half of them were never switched on and nothing ever said so.
+- `/ml-specs:repo-cycle` — **how long specs actually take**, computed from the timestamps the
+  evidence records already carry: Draft → Approved → Implemented → Verified, per spec and in
+  aggregate. Read-only, and deliberately **never keyed to a person** — a cycle-time report that
+  names who is slow stops being a measurement and becomes a performance review, and then the
+  records stop being trustworthy. Specs written before evidence records existed are reported as
+  unmeasurable rather than counted as instant.
+- `/ml-specs:repo-skill` — the **skill catalogue**: what procedures exist, what each takes and
+  produces, and which declared capabilities nothing implements yet. The last part is the point — an
+  unimplemented capability is invisible until something needs it.
+- `/ml-specs:repo-hosts` — which agent hosts this repo is wired for, where an install would land, and which rows are unverified. Read-only; installing is `npx @mlmcps/ml-specs install --host <id>`, which you run yourself.
 
 **Skills** (`skills/`) — procedures that load only when they apply, so they cost nothing when they
 don't.
@@ -236,6 +288,24 @@ reported as **unavailable**, never as clean. An unrun check is not a passing one
 - **Secret scan** (`PreToolUse` on Bash) — blocks a commit whose staged diff contains a likely AWS
   key, private key, Slack/GitHub token, JWT, or `secret=…` assignment. Added lines only, so removing
   a leaked key is never blocked. False positives: add a regex to `.claude/secret-allowlist.txt`.
+- **Scope guard** (`PreToolUse` on Write, Edit, MultiEdit, NotebookEdit, Bash) — refuses a write
+  outside the active spec's `Touches` row, ~57ms, before the edit lands. `spec-gate.mjs` already
+  fails a transition whose branch touched something undeclared, but by then the work exists and
+  somebody has to choose between reverting good code and widening the spec after the fact.
+
+  **Opt-in per spec.** The active spec is the one whose `Branch` row names your current branch;
+  leave `Touches` as `—` and nothing is bounded. It fails open on every uncertainty — no spec
+  names this branch, two do, the row is unfilled, node is missing — and says which. A guard that
+  blocks a file you can see is in scope is a guard you switch off, and then it catches nothing.
+
+  On `Bash` it reads **redirections and `tee`** out of the command, because a Bash payload has no
+  file path. It does not parse `cp`, `mv`, `sed -i` or `dd` — one argument grammar per utility is
+  one false block per mistake. `> "$out"`, a heredoc body, `/dev/null`, and anything outside the
+  repo all yield nothing, and nothing means allowed.
+
+  `specs/` and `.ml-specs/` stay writable whatever the row says: the fix for an out-of-scope
+  change is usually to widen the declaration, and a rule you cannot amend is one people route
+  around.
 
 Project-specific automation (format, lint, test) can't ship — the plugin can't know your commands —
 so it stays opt-in in `templates/hooks/settings.hooks.example.json`.
@@ -253,6 +323,34 @@ because the model said so"* is not an audit trail. All pure Node, no dependencie
 non-zero so it can fail a build:
 - `spec-gate.mjs` — the mechanical evidence a lifecycle transition claims (named tests exist, git
   state, required sections). Used by `/ml-specs:spec-advance`.
+- `spec-advance.mjs` — **the only thing that writes a spec's `Status`.** `spec-advance.md` always
+  claimed to be, and nothing was behind it: the gate reported and a model edited the header table.
+  A rule in a prompt is advice — same model, same repo, two runs, two outcomes, and no way to tell
+  afterwards which happened. The script refuses on any `FAIL`, refuses when a `MANUAL` gate is
+  unsigned, refuses an attestation under ten characters, writes the Status cell and nothing else,
+  and exits 1 on refusal / 2 when it could not run.
+- `spec-evidence.mjs` — reads the **evidence records** back and judges each: `stale` (a file the
+  gate read has changed), `amended` (the spec itself moved after it passed), `unsound` (the record
+  was edited after it was written), `superseded` (the spec has moved past that status), or
+  `unknown`. The four are not interchangeable — each wants a different action, so
+  `/ml-specs:repo-doctor` prints a different remedy for each. `unknown` is **not** a failure: a
+  record that cannot be judged has not been shown wrong.
+- `ml-specs.mjs` — **the published `bin`**, and the only part of the toolkit that reaches hosts
+  other than Claude Code. `ml-specs hosts` lists the 16 agent hosts, whether each is detected on
+  this machine, and where an install would land; `ml-specs install --host <id|all>` writes a thin
+  entry file into the place that host reads. Its verb list is a frozen contract — every shim it
+  installs names `npx @mlmcps/ml-specs <verb>`.
+- `pr-address.mjs` — the library half of `/ml-specs:pr-address`: fetches the PR, keys replies on
+  `(comment, updatedAt)` so a re-run answers nothing twice, and refuses to claim anything about
+  work that is not pushed. The gate is here rather than in the prose on purpose.
+- `spec-eval.mjs` — runs the prompt eval suite. **It reports and never gates.** An eval expectation
+  is a file, an exit code or an absence — never a string the model produced, because a suite that
+  pins wording is a suite that fails on a better prompt. Needs `ML_SPECS_EVAL_RUNNER` set to
+  actually run; without it, it says so rather than reporting a pass.
+- `spec-new.mjs`, `spec-next.mjs`, `spec-why.mjs`, `spec-cycle.mjs`, `spec-wiring.mjs`,
+  `spec-skills.mjs` — the scripts behind `/ml-specs:spec-new`, `/ml-specs:next`,
+  `/ml-specs:repo-cycle`, `/ml-specs:repo-wiring` and `/ml-specs:repo-skill`. All read-only except
+  the first, which only ever creates a new file.
 - `spec-trace.mjs` — the chain from ticket to test case. Distinguishes **broken** from
   **unverifiable**: a Ticket typed into the header table cannot be checked from inside the repo, and
   counting it as passing would make the report a lie.
@@ -315,13 +413,18 @@ wrong field. Dry run by default; `--apply` to write; refuses to apply over a dir
 diff stays reviewable on its own. Idempotent. No network calls — it runs entirely on your machine.
 
 **MCP server** (`mcp/`) — the deterministic half, for any MCP client (Cursor, a custom agent, CI),
-read-only and dependency-free. **Nine tools**: `estate_lookup` (who produces/consumes a contract),
+read-only and dependency-free. **Ten tools**: `estate_lookup` (who produces/consumes a contract),
 `knowledge_check` (do the docs still match the code), `spec_list`, `spec_next_number`
 (collision-safe across branches), plus the `scripts/` half — `spec_gate` (the mechanical lifecycle
 evidence), `spec_trace` (ticket → test-case chain), `spec_brief` (an approved spec packaged for
-whoever implements it), `nfr_check` (which NFRs do not route into anything enforceable) and
-`estate_survey`. Plus the templates as `mlspec://` resources and all 22 commands as MCP prompts, with
-the agents they delegate to inlined.
+whoever implements it), `nfr_check` (which NFRs do not route into anything enforceable),
+`estate_survey`, and `spec_evidence` — the only one that answers about the **past**: does the gate
+that already passed still describe this repository? Plus the templates as `mlspec://` resources and
+all 29 commands as MCP prompts, with the agents they delegate to inlined.
+
+**Nothing that writes is exposed.** `spec-advance.mjs` is the only thing that may change a spec's
+Status, and it stays out of MCP deliberately: a status transition is a claim a human signs, and a
+tool a model can call in a loop is the wrong shape for one.
 
 Exposing `scripts/` matters more than the count suggests: `spec-gate.mjs` is the gate the whole
 lifecycle turns on, and until now a CI job or a non-Claude agent could not ask it *does this spec
@@ -330,9 +433,45 @@ a tool error — a legitimate `FAIL` the caller cannot read would be worse than 
 and stay in the plugin — see [mcp/README.md](mcp/README.md). `knowledge_check` imports
 the CI gate's implementation rather than copying it, so the two can't drift.
 
-**Templates** (`templates/`) — seeded/filled into each repo by `/ml-specs:repo-init`: spec README/TEMPLATE/AGENTS,
-`docs/` knowledge templates (PATTERNS, ARCHITECTURE, ESTATE), the CLAUDE.md fragment, `settings.json`
-(committed attribution policy), optional `hooks/` automation examples, and `.gitattributes`.
+**Templates** (`templates/`) — seeded/filled into each repo by `/ml-specs:repo-init`: spec
+README/TEMPLATE/AGENTS, `docs/` knowledge templates (PATTERNS, ARCHITECTURE, ESTATE, and the two
+optional ones — GLOSSARY and CONTEXT), the CLAUDE.md fragment, `settings.json` (committed
+attribution policy), optional `hooks/` automation examples, `.gitattributes`, and
+`ML-SPECS.template.md` — the single generated document that carries the loop into a host that is
+not Claude Code.
+
+**The two optional documents are seeded only on evidence.** `/ml-specs:repo-init` writes
+`docs/GLOSSARY.md` when the repo has domain vocabulary worth defining and `docs/CONTEXT.md` when it
+has constraints the code cannot state, and writes neither otherwise. `/ml-specs:repo-doctor` reports
+an absent one as **"not in use"**, never as a gap. An empty glossary is worse than none: it costs
+context on every load and answers nothing.
+
+## Evidence behind a status
+
+A status used to be a claim with no basis on file. Pass the gate on Monday, change the module it
+covered on Tuesday, and `Verified` still read `Verified` with nothing able to notice.
+
+`/ml-specs:spec-advance` now records what the gate read: the base branch and sha, a hash of every
+§6 test it resolved, a hash of every file the branch changed, the gate verdicts, and the signed
+attestation. `spec-evidence.mjs` reads them back; `/ml-specs:repo-doctor` runs it; `/ml-specs:next`
+consults it before the lifecycle, so **a failing record outranks the board** — a spec reading
+`Verified` over a stale record is told to re-earn the claim, not to open a PR.
+
+| Verdict | What it means | What to do |
+|---|---|---|
+| `stale` | a file the gate fingerprinted has changed | re-run the gate: `spec-advance --re-record` |
+| `amended` | the **spec** moved after it passed — a criterion reworded or removed, a §6 row repointed | decide whether that was intended **before** re-running anything |
+| `unsound` | the record was edited after it was written | it is not evidence; nothing about it is recoverable |
+| `superseded` | a record exists for a status further along | nothing — this is a successful advance, not drift |
+| `unknown` | the record cannot be judged, or predates records | **not a failure.** A record that cannot be judged has not been shown wrong |
+
+Three things are deliberate. `superseded` is decided from the **records**, never from the `Status`
+cell a human can hand-edit, and it never outranks `unsound` — advancing a spec cannot launder a
+doctored one. `Approved` records **no file radius**, because approval happens before the work: an
+approval that went `stale` for being implemented is how a freshness signal stops being read. And a
+record says **how it was attested** — `human` or `unattended` — because `--attest` takes any
+ten-character string, so an automated run could sign a person's name to a judgement they never
+made. `--unattended` lowers no bar; it makes the transition legible, not permitted.
 
 ## Install (per developer / per repo)
 
@@ -364,6 +503,33 @@ the workspace). A `github` source is the only kind that works from a committed s
 registers a second copy that updates on a different schedule and will eventually disagree with the
 first. The standalone `@mlmcps/ml-specs-mcp` package is for clients with no plugin system — Cursor,
 VS Code's Copilot, CI.
+
+## Every other host
+
+The gates were always host-neutral — `spec-gate.mjs` reads a Markdown file and exits `0`/`1`/`2`.
+What was missing was a way to reach them without `${CLAUDE_PLUGIN_ROOT}`, a variable exactly one
+host defines.
+
+```bash
+npx @mlmcps/ml-specs hosts                 # 16 hosts, which are detected, where an install lands
+npx @mlmcps/ml-specs install --host all    # or --host cursor, --host windsurf, …
+npx @mlmcps/ml-specs install --host all --dry-run
+```
+
+It writes a thin entry file into the place each host reads, pointing at one generated `ML-SPECS.md`
+that holds the loop. `/ml-specs:repo-hosts` reports the resulting board.
+
+**Claude Code is deliberately skipped.** It is served by the plugin, which gives it 29 commands, 10
+agents and four live hooks; a generated shim would be a strictly worse copy of that.
+
+**A generated file may never name a mechanism its host lacks** — no `${CLAUDE_PLUGIN_ROOT}`, no
+`$ARGUMENTS`, no `/ml-specs:` command, no hook, no subagent dispatch. `install` **refuses to write**
+rather than emitting a document that tells an agent to do something its host cannot do. That is one
+rule rather than sixteen precisely because Claude Code gets no generated file at all.
+
+**Not all sixteen have been watched load.** `ml-specs hosts` marks which rows are verified and which
+are written from the host's documented layout, and `/ml-specs:repo-hosts` carries that column
+through. Claiming all sixteen were exercised would be worth less than a list that admits which.
 
 ## First-time setup in a new service
 
@@ -438,6 +604,60 @@ fails **open**: a typo must never silently disable a gate.
 This is a second, explicit gate on top of the existing one: the standards check only ever runs
 when the repo also has a `.mlskills.json`. `off` is reversible at any time — change the value, and
 the next review reports standards again.
+
+## What this does not do
+
+Collected in one place, because each of these is stated where it is implemented and a reader
+should not have to find five sections to learn them.
+
+- **It does not judge whether your contract is any good.** The toolkit governs *process*: a
+  contract on paper, approved before code, verified against its own criteria. Whether the API shape
+  or data model is sound is the optional [`ml-skills`](#opting-out-of-architecture-standards) half,
+  and it is off in many repos.
+- **It is not a service.** No database, no daemon, no network calls from the gates. `spec-gate.mjs`
+  reads Markdown and git and exits `0`/`1`/`2`. Four CLIs do reach host APIs — `pr-address`,
+  `spec-fanout`, `tracker-sync`, `branch-policy` — and only **two SCM hosts exist**, GitHub and
+  Azure DevOps Repos. No GitLab, no Bitbucket.
+- **The tracker and SCM clients have never run against a live organisation.** They are
+  contract-tested against a recording transport, built to what ADO 7.1, Jira Cloud v3 and GitHub
+  2022-11-28 document. Every write path has `--dry-run`, which needs no credentials.
+- **Hosts other than Claude Code get a document, not the machinery.** No hooks, no subagent
+  dispatch, no slash commands — those are host mechanisms, and `install` refuses to write a file
+  naming one the host lacks rather than emitting an instruction that cannot be followed.
+- **Not all sixteen hosts have been watched load.** `ml-specs hosts` marks which are verified and
+  which come from vendor documentation.
+- **The prompt evals report and never gate**, and the structural prompt checks are warnings. A
+  check that can fail a build starts pressuring people to write worse prose to appease it.
+- **A gate refuses rather than guesses.** `MANUAL` is a real verdict: human approval, whether a §8
+  question is blocking, whether the suite truly ran green. A `PASS` there would get believed, so
+  the scripts decline to give one.
+- **The learned docs are only worth what they say.** Patterns carry `(inferred)` markers, and a
+  stale summary is worse than none — which is why `/ml-specs:repo-refresh` and
+  `/ml-specs:repo-doctor` exist and why absence is reported as "not in use" rather than as a gap.
+
+## Studied, not copied
+
+Two of the ideas in this toolkit came from reading other people's work carefully, and it would be
+poor form not to say so. Both are MIT-licensed and worth knowing in their own right.
+
+- **[`sdd-agentic-flow`](https://github.com/gmartins-dev/sdd-agentic-flow)** (SAF) by gmartins-dev
+  — a dimension-by-dimension comparison of its IMPLEMENT phase against this one found six
+  capabilities it had and this toolkit did not. `specs/0018-saf-borrowings-implement-phase.md`
+  closes them and is named after the debt. The `Rigor` row, resuming an interrupted build from a
+  handoff note, and `docs/GLOSSARY.md` as a place for domain vocabulary all start there. Its
+  separation of *capability* from *the procedure a role runs* is also what
+  `/ml-specs:repo-skill` is built on.
+- **[`spectoflow`](https://github.com/georgesmomo/spectoflow)** by Georges MOMO — the thin
+  per-host adapter pattern: one canonical document, and a small native entry file per agent host
+  pointing back at it, rather than sixteen divergent copies. That is the shape of
+  `ML-SPECS.template.md` and `ml-specs install --host`.
+
+What this toolkit does differently is narrower and duller on purpose: **the gates are scripts, not
+prose.** A lifecycle transition is decided by `spec-advance.mjs`, which refuses on a `FAIL` and
+leaves an evidence record behind, so a status that has stopped being true can say so. Where those
+projects are broader, this one is more willing to refuse.
+
+If you are evaluating this, both of those are worth your time too.
 
 ## Updating
 

@@ -8,6 +8,18 @@ Give the user a read-only view of **what's in flight**. Do NOT edit anything.
 
 Filter/mode: **$ARGUMENTS**
 
+Then, once, before the table:
+
+```
+node ${CLAUDE_PLUGIN_ROOT}/scripts/spec-evidence.mjs --failing
+```
+
+A spec's row shows what its Status CLAIMS. This shows whether the gate that granted it still
+describes the repository — a spec can read a clean `Verified` over a record that went stale a
+fortnight ago, and the row alone cannot tell you. Fold the result into the board: mark any spec
+with a failing record, and say which verdict (`stale`, `amended`, `unsound`). `unknown` is not a
+failure and a spec with no record predates evidence recording; neither is worth a mark.
+
 ## Get the data cheaply
 
 If this repo has the toolkit's MCP server wired up, call **`spec_list`** — it parses every spec

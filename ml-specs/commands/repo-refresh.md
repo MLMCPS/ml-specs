@@ -45,6 +45,13 @@ Steps:
    - `docs/ARCHITECTURE.md` — refresh structure, data/persistence, events, external calls.
    - `CLAUDE.md` — fix the stack/build/run/test commands and the "Code patterns & conventions"
      summary if they've drifted.
+   - `docs/GLOSSARY.md` and `docs/CONTEXT.md` — **only if they exist**. Their absence is a choice
+     somebody made, not drift, so say nothing about it rather than offering to create them on every
+     refresh. Where they exist, correct what the code has made wrong — a renamed domain term, a
+     constraint that no longer holds — and **never overwrite the human prose around it**: these two
+     are the most hand-written files in the layer, and the least reconstructible if lost. Never
+     copy content between `CONTEXT.md` and `CLAUDE.md` in either direction; `CLAUDE.md` points and
+     `CONTEXT.md` explains, and a refresh that merges them destroys the distinction permanently.
    - `docs/SKILLS.md` — do NOT rewrite it here. If the stack itself changed (a new language,
      framework or data store), say so and recommend `/ml-specs:repo-skills`, which re-matches the catalog.
      If the stack is unchanged, leave the file alone: the catalog moving is not repo drift.

@@ -1,0 +1,27 @@
+{
+  "_README": [
+    "What returns control to the human, written down once instead of scattered through 23 command",
+    "files. Keyed by command filename; `blockingConditions` is what stops a command, `produces` is",
+    "what it leaves behind.",
+    "",
+    "Entries are OPTIONAL — a command absent from this file is not an error, and most are absent.",
+    "The join is not optional: an entry naming a command that does not exist is an error, and so is",
+    "a malformed one. The validator checks SHAPE and the JOIN only; it never checks that a listed",
+    "condition matches anything, because a condition nothing matches is not a validation failure.",
+    "The prompt honours the meaning. That split is the contract, not a gap in it.",
+    "",
+    "Plugin-only, deliberately: `package.json`'s `files[]` is a disclosure boundary, and the MCP",
+    "server has no use for this. It is not widened to carry it."
+  ],
+  "spec-build.md": {
+    "blockingConditions": [
+      "spec-not-approved",
+      "spec-gap",
+      "suite-red"
+    ],
+    "produces": [
+      "code-change",
+      "test-evidence"
+    ]
+  }
+}

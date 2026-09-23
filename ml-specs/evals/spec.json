@@ -1,0 +1,25 @@
+{
+  "command": "spec",
+  "why": "SPECIFY writes a reviewable spec and writes no code. The second half is the one worth checking: a phase that starts implementing is the failure spec-driven development exists to prevent.",
+  "cases": [
+    {
+      "name": "writes a spec and no source file",
+      "given": {
+        "files": {
+          "src/thing.mjs": "export const f = 1;\n"
+        }
+      },
+      "invoke": "/ml-specs:spec add a token validator",
+      "expect": [
+        {
+          "exists": "specs",
+          "why": "SPECIFY produces a spec"
+        },
+        {
+          "unchanged": "src/thing.mjs",
+          "why": "and no code \u2014 the whole point of the phase"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "command": "pr",
+  "why": "Produces the PR text and opens nothing. A command that opens a pull request as a side effect of drafting one has taken an outward-facing action nobody asked for.",
+  "cases": [
+    {
+      "name": "drafts without opening anything",
+      "given": {
+        "files": {
+          "specs/0001-thing.md": "# Spec: a thing\n\n| | |\n|---|---|\n| **Status** | Draft |\n| **Branch** | feat/thing |\n| **Author** | Ada |\n\n## 5. Acceptance criteria\n- [ ] **AC1** \u2014 it validates the token.\n\n## 6. Test plan\n| AC | Test file | What it proves |\n|---|---|---|\n| AC1 | `test/thing.test.mjs` | it validates |\n\n## 8. Open questions\nNone blocking.\n"
+        }
+      },
+      "invoke": "/ml-specs:pr specs/0001-thing.md",
+      "expect": [
+        {
+          "unchanged": "specs/0001-thing.md",
+          "why": "drafting PR text changes no artifact"
+        }
+      ]
+    }
+  ]
+}

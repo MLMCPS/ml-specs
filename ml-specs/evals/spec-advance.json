@@ -1,0 +1,21 @@
+{
+  "command": "spec-advance",
+  "why": "The only writer of a Status, and it refuses a transition whose evidence is not there. A status nobody checked is worth nothing.",
+  "cases": [
+    {
+      "name": "refuses to skip a status, leaving the cell alone",
+      "given": {
+        "files": {
+          "specs/0001-thing.md": "# Spec: a thing\n\n| | |\n|---|---|\n| **Status** | Draft |\n| **Branch** | feat/thing |\n| **Author** | Ada |\n\n## 5. Acceptance criteria\n- [ ] **AC1** \u2014 it validates the token.\n\n## 6. Test plan\n| AC | Test file | What it proves |\n|---|---|---|\n| AC1 | `test/thing.test.mjs` | it validates |\n\n## 8. Open questions\nNone blocking.\n"
+        }
+      },
+      "invoke": "/ml-specs:spec-advance specs/0001-thing.md Verified",
+      "expect": [
+        {
+          "unchanged": "specs/0001-thing.md",
+          "why": "Draft to Verified skips two gates; the cell must not move"
+        }
+      ]
+    }
+  ]
+}

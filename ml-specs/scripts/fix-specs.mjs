@@ -23,6 +23,7 @@ import { readFileSync, writeFileSync, existsSync, readdirSync, renameSync, statS
 import { join, basename } from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { resolveStatus } from './lib/specs.mjs';
+import { lines } from './lib/text.mjs';
 
 const args = process.argv.slice(2);
 const flag = (n) => { const i = args.indexOf(n); return i === -1 ? null : args[i + 1]; };
@@ -79,6 +80,7 @@ function highestUsed(specs) {
   };
   specs.forEach((s) => consider(s.name));
   if (isRepo) {
+    // command output: `git log --name-only`, not a file somebody's editor wrote.
     git('log', '--all', '--pretty=format:', '--name-only', '--diff-filter=A', '--', 'specs/[0-9]*')
       .split('\n').filter(Boolean).forEach(consider);
   }
@@ -147,11 +149,14 @@ function planStatus(specs) {
 
   for (const s of specs) {
     const text = readFileSync(abs(s.file), 'utf8');
-    const lines = text.split('\n');
-    const i = lines.findIndex((l) => STATUS_ROW.test(l));
+    // `rows`, not `lines` — `lines()` is the CRLF-tolerant splitter imported above, and a local of
+    // that name shadowed it. A Status cell read from a CRLF file parses as `Approved\r`, matches no
+    // lifecycle value, and this repair tool then "fixes" a status that was already correct.
+    const rows = lines(text);
+    const i = rows.findIndex((l) => STATUS_ROW.test(l));
     if (i === -1) continue;
 
-    const line = lines[i];
+    const line = rows[i];
     // Take everything between the cell delimiter and the LAST pipe: the prose itself often
     // contains pipes, and truncating at the first one would silently eat content.
     const start = line.indexOf('|', line.indexOf('**Status**')) + 1;
@@ -190,19 +195,23 @@ function planStatus(specs) {
 }
 
 function applyStatus(change) {
-  const lines = readFileSync(abs(change.file), 'utf8').split('\n');
+  // Reading with the CRLF-tolerant splitter and writing back with `\n` normalises the file's line
+  // endings as a side effect. That is the right trade for the one file this tool exists to repair:
+  // a half-CRLF spec is what produced the wrong status in the first place, and `.gitattributes`
+  // (spec 0062) is what keeps it that way afterwards.
+  const rows = lines(readFileSync(abs(change.file), 'utf8'));
   const i = change.lineIndex;
-  const line = lines[i];
+  const line = rows[i];
   const start = line.indexOf('|', line.indexOf('**Status**')) + 1;
   const end = line.lastIndexOf('|');
-  lines[i] = `${line.slice(0, start)} ${change.to} ${line.slice(end)}`;
+  rows[i] = `${line.slice(0, start)} ${change.to} ${line.slice(end)}`;
 
   // Insert the preserved prose immediately after the header table block.
   let j = i;
-  while (j + 1 < lines.length && lines[j + 1].trimStart().startsWith('|')) j++;
-  lines.splice(j + 1, 0, '', `> **Status note:** ${change.from}`);
+  while (j + 1 < rows.length && rows[j + 1].trimStart().startsWith('|')) j++;
+  rows.splice(j + 1, 0, '', `> **Status note:** ${change.from}`);
 
-  writeFileSync(abs(change.file), lines.join('\n'));
+  writeFileSync(abs(change.file), rows.join('\n'));
 }
 
 // --- run --------------------------------------------------------------------
@@ -214,6 +223,7 @@ if (specs.length === 0) {
 }
 
 if (APPLY && isRepo && !FORCE) {
+  // command output: `git status --porcelain`, not a file somebody's editor wrote.
   const dirty = git('status', '--porcelain', '--', 'specs', 'docs').split('\n').filter(Boolean);
   if (dirty.length) {
     console.error('Refusing to --apply with uncommitted changes under specs/ or docs/.');

@@ -81,6 +81,14 @@ than inlining them. In a monorepo, prefer per-package sections/files over one fa
    `${CLAUDE_PLUGIN_ROOT}/templates/docs/ESTATE.template.md` with the real contract index. For a
    standalone app, SKIP it entirely.
 
+   **Optionally seed `docs/GLOSSARY.md` and `docs/CONTEXT.md`** from
+   `${CLAUDE_PLUGIN_ROOT}/templates/docs/GLOSSARY.template.md` and
+   `${CLAUDE_PLUGIN_ROOT}/templates/docs/CONTEXT.template.md`. Seed a
+   glossary only if Phase 1 found domain terms that mean something specific *here*; seed a context
+   file only if you found constraints that are not derivable from the code. **An empty one is
+   worse than none** — it is a file a reader opens, learns nothing from, and stops opening. Say
+   which you skipped and why, so the human can add one later on purpose.
+
 7. **`CLAUDE.md` — the primary project memory.** If absent, run `/init` first for a base. Then
    ensure it contains the shared sections from `${CLAUDE_PLUGIN_ROOT}/templates/CLAUDE.fragment.md`
    ("Knowledge layer", "Working agreement", "Spec-driven development", "Quality gates"), AND a

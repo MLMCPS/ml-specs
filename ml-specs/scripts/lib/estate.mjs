@@ -7,6 +7,8 @@
 // them, and a parser that demanded exact formatting would fail on the first
 // sensible edit someone makes.
 
+import { lines } from './text.mjs';
+
 const ROW = /^\|(.+)\|\s*$/;
 const SEP = /^\|[\s:|-]+\|\s*$/;
 const PLACEHOLDER = /^(<.*>|_TBD_|—|-|n\/?a|none|)$/i;
@@ -17,7 +19,7 @@ const names = (v) => String(v ?? '').split(/[,/]| and /).map(clean).filter((n) =
 function tables(raw) {
   const out = [];
   let current = [];
-  for (const line of raw.split('\n')) {
+  for (const line of lines(raw)) {
     const t = line.trim();
     // The `|---|---|` rule belongs to the table it divides. Treating it as a
     // break splits every table in two and orphans its header.

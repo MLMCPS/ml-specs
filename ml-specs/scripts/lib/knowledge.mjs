@@ -10,6 +10,7 @@
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
+import { lines } from './text.mjs';
 
 const BEGIN = '<!-- sdd:constraints -->';
 const END = '<!-- /sdd:constraints -->';
@@ -30,7 +31,7 @@ export function read(path) {
   const block = body.split(BEGIN)[1].split(END)[0];
 
   const out = [];
-  for (const line of block.split('\n')) {
+  for (const line of lines(block)) {
     const m = LINE.exec(line.trim());
     if (!m) continue;
     const scope = m[2].split(',').map((s) => s.trim()).filter(Boolean);

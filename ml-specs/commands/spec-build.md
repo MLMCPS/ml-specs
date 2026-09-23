@@ -12,6 +12,36 @@ updated first, then the code. Never the other way round.
 
 Steps:
 
+0. **Resume, if there is something to resume from.** If `.claude/handoff/` exists, find the newest
+   note whose `**Spec**` header row names *this* spec; if none names it, the newest unattributed
+   one. `/ml-specs:handoff` writes one note per invocation, so the directory holds many notes for
+   many specs and the newest overall is often about something else.
+
+   **Apply the same 7-day window the `SessionStart` hook uses** (`ML_HANDOFF_MAX_AGE_DAYS`, default
+   7, `${CLAUDE_PLUGIN_ROOT}/hooks/handoff-notice.sh`). A note the hook has already stopped
+   surfacing must not become live context here: say in one line that a note exists but is older
+   than the window, do not read it, and proceed from the spec.
+
+   Within the window, read it **before** the spec. Its goal, status and proposed next action are
+   **supporting context** — where the work stopped and what was already tried. The spec remains the
+   contract: where the two disagree, the spec wins, and a note claiming something is done is a
+   place to look, never evidence that it is. **A stale or absent note never authorises skipping
+   work.** Say in one line which note you used, or that there was none, so the human can see which
+   context you started from.
+
+   Read only. `/ml-specs:handoff` owns these notes outright, exactly as `/ml-specs:spec-advance`
+   owns a spec's `Status` — this command leaves the note exactly as it found it.
+
+0b. **Read your own blocking conditions.** `${CLAUDE_PLUGIN_ROOT}/command-contracts.json` holds an
+   entry for `spec-build.md`: `blockingConditions` is the list of situations in which you return
+   control to the human rather than continuing, and `produces` is what this command leaves behind.
+   When one of them holds, stop and **name the condition** — "returning control: `spec-gap`" — so
+   the human knows which rule fired rather than inferring it from a paragraph of explanation.
+
+   The conditions are written down in one file instead of scattered through 23 commands, and the
+   validator checks only that the file's shape and names are sound. Honouring the meaning is this
+   command's job: the list is not self-enforcing, and a condition nobody acts on is a comment.
+
 1. **Read the spec in full**, plus `CLAUDE.md` and `docs/PATTERNS.md`, and detect the stack (any
    language) from the manifest/build file. Check its Status is `Approved` — if it's still `Draft`,
    say so and stop; building an unapproved contract is how rework happens.
@@ -60,7 +90,44 @@ Steps:
 Keep the spec in the same branch/PR as the implementation, follow the repo's branch-naming and
 commit conventions, and only commit/push when the human asks.
 
+**IMPLEMENT changes the working tree and nothing else.** No tracker transition, no comment on a
+ticket, no remote PR opened, merged or closed, no rewriting of git history, no change to repository
+configuration — branch protection, CI workflows, hooks, access. Not as a convenience, not because
+the spec's `Ticket` row names an issue, not because it looks like the obvious next step. Each of
+those is visible to people who are not in this conversation and cannot be undone by discarding a
+diff, which is what separates them from editing a file. The human asks, or it does not happen.
+`/ml-specs:pr-address` is the one documented carve-out, and it shows the full diff first.
+
 When you do commit, the message names the humans who own the change and nothing else — no
 `Co-Authored-By:` line for an assistant, no "Generated with"/"Made with" line, no model or vendor
 name, no tool badge or emoji. This applies to every commit on the branch: a squash merge aggregates
 trailers from all of them, so one stray line resurfaces on the merge commit.
+
+Next step: `/ml-specs:spec-advance <spec-file> Implemented` (step 6), then
+`/ml-specs:spec-verify <spec-file>` (step 7).
+
+**Then offer those steps as actions.** Put them to the user with the AskUserQuestion tool —
+`header: "Next step"`, `multiSelect: false`, one option per concrete command below, the one you
+recommend **first** and its label suffixed `(Recommended)`, with the *why* and the cost in its
+description:
+
+- `/ml-specs:spec-advance <spec-file> Implemented` **(Recommended)** — the gate re-checks that
+  every test the §6 table names exists on disk, so the status has evidence behind it.
+- `/ml-specs:spec-verify <spec-file>` — the adversarial pass that gates `Verified`.
+
+**If the agent reported a failing suite or a spec gap, the recommended option is the fix** — the
+spec update, or another `/ml-specs:spec-build <spec-file>` — never the advance. Offering a
+transition whose evidence you have just been told is missing is the opposite of what the gate is
+for. **Given several specs**, the options name the *set* ("verify all four"), because that run has
+no single next spec to advance.
+
+**Navigation, not consent** — never offer a step already ruled out, and never ask permission for
+something this command should simply do. **No double question:** if this run already stopped on a
+blocking decision and that is the last thing the user answered, that decision *is* the close —
+name
+the next step in prose and stop. Neither the step-2 gap questions nor the step-3 plan approval is
+that decision: both come before the work, not after it. **Only a command asks, never an agent** —
+a subagent has no
+channel to the human, so the `developer` agents spawned in step 4 never present these options,
+whether one spec is building or four. The prose next-step line stays either way: it is what the
+transcript keeps and all a non-interactive run emits.

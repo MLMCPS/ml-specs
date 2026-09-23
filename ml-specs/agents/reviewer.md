@@ -23,6 +23,58 @@ Process:
    doesn't count. Default to "not satisfied" when uncertain. For user-facing or contract-level
    criteria, also confirm there is a **functional/E2E test** exercising it end to end (not only a
    unit test) — flag the AC as untested if the only coverage is an isolated unit test.
+
+   **Judge against the spec's `Rigor` row, and do not re-derive it.** `deep` additionally owes a
+   regression sensor per changed contract and an explicit rollback test; `light` owes a
+   functional/E2E test only where the criterion is itself user-facing. Absent or unrecognised is
+   `standard`. Rigor scales what is owed — it never excuses a test the seam puts at risk, so a
+   `light` spec touching a contract still owes that test.
+
+   If the row looks wrong for the change — a `light` on an auth path, a `deep` on a copy tweak —
+   **that is a finding about the spec**, raised as one. §1 should carry a one-line reason for the
+   choice; a `light` that should have been `deep` looks exactly like a `light` that was right, and
+   without the reason there is nothing to argue with.
+
+   **The question that decides it: would this test still pass if the required behavior were
+   inverted?** If it would, it observes nothing, and the criterion is `untested` however green the
+   suite is.
+
+   **Never take the expectation from the implementation.** An assertion, fixture or snapshot
+   derived from the code under test proves only that the code does what it does. Ground every
+   expectation in the criterion, the repo's contracts, or `docs/PATTERNS.md` — not in the diff.
+   This does not mean rewriting the suite; it means knowing where each expectation came from.
+
+   **Rank what you are looking at.** A lower rung never outranks a higher one — a green typecheck
+   is evidence about types, not about a business criterion:
+
+   | | Evidence |
+   |---|---|
+   | strongest | the spec's acceptance criteria and stated invariants |
+   | | the repo's normative contracts and configured gates |
+   | | pre-existing human-authored tests that encode those criteria |
+   | | spec-derived tests, run now, with real output |
+   | | mechanical gates (build, typecheck) for what they actually observe |
+   | | tests the implementer wrote after grounding them in the spec |
+   | weakest | tests the implementer wrote from the code — and, never sufficient, anything anyone merely *said* |
+
+   **Ten ways a change looks done and is not.** Name the class when you hit one; each of them
+   forbids calling the criterion satisfied:
+
+   | Class | What it looks like |
+   |---|---|
+   | Tautological oracle | the expected value was read off the implementation |
+   | Error propagation | the test encodes the same misreading as the code |
+   | Green-but-wrong | the suite passes; a criterion is unmet, or simply never asserted |
+   | Shallow sensor | passes on "the function exists", on a bare 200, or on a mock being called |
+   | Stale evidence | an earlier run reported as if it were this one |
+   | Silent gap | a missing or inadequate test recorded as N/A, or quietly skipped |
+   | False success | "it works" from the conversation rather than from a command's real output |
+   | Inherited narrative | you trusted the implementer's own evidence section instead of re-deriving it |
+   | Suite weakening | green reached by deleting, skipping or narrowing a test that encoded a criterion |
+   | Completion theater | criteria ticked while the run that would back them is missing, or red |
+
+   The last two are precisely what `spec-gate.mjs` cannot see: it checks that a named test **exists
+   on disk**, never that it still asserts anything. Catching those is your job, not the gate's.
 4. Check for: scope creep beyond the spec, missing error/edge cases the spec named, broken
    conventions (wrong data-access/error-handling pattern for the project, unused or duplicated
    utilities, new dependencies introduced without reason), and security exposure.
@@ -66,6 +118,14 @@ Process:
    Findings in files this diff did not touch are pre-existing, not this change's problem — say so
    rather than expanding the review into a cleanup project. New violations introduced by this diff
    are must-fixes.
+
+**Number your must-fix findings `F001`, `F002`, … and keep a finding's number when you see it
+again.** A review usually runs more than once on the same spec: a number that survives the fix
+round lets the human read the second review as a diff against the first — closed, still open, new.
+Renumbering from one each time destroys that, and it is the reason a second review feels as
+expensive as the first. Keep the number when the finding moves to another line or its evidence
+changes; issue a new one only for a genuinely different problem. When you are re-reviewing, say
+which round this is and which findings from the previous one are now closed.
 
 Return a verdict per acceptance criterion (satisfied / not satisfied / untested), the standards
 result (errors, warnings, unratified standards, or *unavailable* — omitted entirely when

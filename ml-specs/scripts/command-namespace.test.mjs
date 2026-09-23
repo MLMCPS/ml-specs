@@ -57,11 +57,18 @@ function runFixture(files, commands = FIXTURE_COMMANDS) {
     mkdirSync(join(dir, 'scripts'), { recursive: true });
     mkdirSync(join(dir, 'ml-specs', 'commands'), { recursive: true });
     copyFileSync(VALIDATOR, join(dir, 'scripts', 'validate-plugin.mjs'));
+    // The validator's `lib/` closure, whole. It was one file; spec 0051 made it three
+    // (`prompt-shape.mjs` → `text.mjs`), and a per-file list breaks every harness the next time it
+    // grows. Copying the directory costs nothing and cannot rot.
     mkdirSync(dirname(join(dir, VALIDATOR_LIB)), { recursive: true });
-    copyFileSync(join(ROOT, VALIDATOR_LIB), join(dir, VALIDATOR_LIB));
+    for (const f of readdirSync(join(ROOT, dirname(VALIDATOR_LIB)))) {
+      if (f.endsWith('.mjs') && !f.endsWith('.test.mjs')) {
+        copyFileSync(join(ROOT, dirname(VALIDATOR_LIB), f), join(dir, dirname(VALIDATOR_LIB), f));
+      }
+    }
     for (const name of commands) {
       writeFileSync(join(dir, 'ml-specs', 'commands', `${name}.md`),
-        '---\ndescription: fixture\n---\n\nFixture body; names no command.\n');
+        `---\ndescription: fixture\nargument-hint: <arg>\n---\n\nFixture body. Delegates to no agent on purpose; next: /ml-specs:${name}\n`);
     }
     for (const [rel, body] of Object.entries(files)) {
       const abs = join(dir, rel);

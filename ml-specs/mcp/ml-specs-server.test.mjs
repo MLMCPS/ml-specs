@@ -8,12 +8,18 @@
 import { test, describe, before } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const SERVER = join(HERE, 'ml-specs-server.mjs');
+
+/** A knowledge-layer doc, or null when this checkout does not carry one. */
+const readGenerated = (rel) => {
+  const abs = join(HERE, rel);
+  return existsSync(abs) ? readFileSync(abs, 'utf8') : null;
+};
 
 const INIT = {
   jsonrpc: '2.0', id: 0, method: 'initialize',
@@ -50,9 +56,32 @@ const callAt = (root, name, args = {}) =>
 describe('script-backed tools', () => {
   test('every deterministic script in scripts/ that ports is exposed', () => {
     const tools = rpc({ jsonrpc: '2.0', id: 1, method: 'tools/list' }).get(1).result.tools.map((t) => t.name);
-    for (const name of ['spec_gate', 'spec_trace', 'spec_brief', 'nfr_check', 'estate_survey']) {
+    for (const name of ['spec_gate', 'spec_trace', 'spec_brief', 'nfr_check', 'estate_survey', 'spec_evidence']) {
       assert.ok(tools.includes(name), `${name} is not exposed`);
     }
+  });
+
+  test('SENSOR: an agent can ask whether the evidence still stands', () => {
+    // The CLI gained this reader and the MCP surface did not, which is the same defect the reader
+    // was built to fix — a verdict nobody can see — one door over. An agent that can gate a spec
+    // but cannot ask whether a past gate still holds will act on a status nothing re-checked.
+    const tools = rpc({ jsonrpc: '2.0', id: 1, method: 'tools/list' }).get(1).result.tools;
+    const tool = tools.find((t) => t.name === 'spec_evidence');
+    assert.ok(tool, 'spec_evidence is not exposed');
+
+    // The description has to name what a failing verdict MEANS, because the caller is a model
+    // deciding what to do next and "stale" and "amended" want opposite actions.
+    for (const word of ['stale', 'amended', 'unsound', 'unknown']) {
+      assert.match(tool.description, new RegExp(word), `the description never mentions ${word}`);
+    }
+    assert.match(tool.description, /is NOT a failure/, 'unknown must not read as a failure');
+  });
+
+  test('spec_evidence reports no records as a result, not an error', () => {
+    // A repository that has never gated anything is not broken, and a tool error there would
+    // teach a caller to stop asking.
+    const msg = callAt(EXAMPLE_REPO, 'spec_evidence', {});
+    assert.ok(!msg.error, `spec_evidence raised a protocol error: ${JSON.stringify(msg.error)}`);
   });
 
   test('spec_gate accepts a bare id, not only a path', () => {
@@ -209,7 +238,34 @@ describe('the existing surface still works', () => {
       'estate_lookup', 'knowledge_check', 'spec_list', 'spec_next_number',
       // the deterministic scripts, which used to be reachable only from Claude Code
       'estate_survey', 'nfr_check', 'spec_brief', 'spec_gate', 'spec_trace',
+      // whether a gate that already passed still describes this repository
+      'spec_evidence',
     ].sort());
+  });
+
+  test('the mcp shard counts the tools that actually ship', (t) => {
+    // Every other knowledge shard is held to its numbers — scripts, hooks and prompt-surface all
+    // have a test comparing the digit in the doc against what is on disk, and between them they
+    // caught six stale claims while this branch was written. This one was held to nothing, which
+    // is why its tool list sat at four while five more shipped, and why the drift was found by
+    // grepping rather than by a failing test.
+    // Repo root, not the plugin: ml-specs/mcp/ → ../.. . A wrong path here resolves to nothing,
+    // reads as "the knowledge layer is absent", and the test passes having checked nothing — which
+    // is what the first version of this did.
+    const shard = readGenerated(join('..', '..', 'docs', 'architecture', 'mcp.md'));
+    if (!shard) return t.diagnostic('docs/architecture/mcp.md absent (generated layer) — skipped');
+
+    const live = rpc({ jsonrpc: '2.0', id: 1, method: 'tools/list' }).get(1).result.tools.map((x) => x.name);
+    const claimed = shard.match(/\*\*(\d+) tools\b/);
+    assert.ok(claimed, 'docs/architecture/mcp.md no longer states how many tools ship');
+    assert.equal(Number(claimed[1]), live.length,
+      `the shard claims ${claimed[1]} tools, the server exposes ${live.length}`);
+
+    // And names them, because a count that is right while the list is wrong is the shape this
+    // shard was already in: four names under a heading that had stopped describing them.
+    for (const name of live) {
+      assert.ok(shard.includes(`\`${name}\``), `docs/architecture/mcp.md never names ${name}`);
+    }
   });
 
   test('every tool declares a usable input schema', () => {

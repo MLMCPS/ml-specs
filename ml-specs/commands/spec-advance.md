@@ -13,9 +13,13 @@ ran green, not that an agent felt done.
 
 ## What you may edit
 
-The spec's **header table** (Status, Branch, Date), its **Revisions** table, and its
+The spec's **header table** (Branch, Date), its **Revisions** table, and its
 **acceptance-criteria checkboxes** — nothing else. Never touch code, never commit, never edit
 another spec.
+
+**Not the Status cell.** `scripts/spec-advance.mjs` writes that, and only after the gate cleared
+and you signed the judgement it could not make (step 5). Editing the cell by hand produces the
+one thing this command exists to prevent: a status with no record behind it.
 
 ## Procedure
 
@@ -77,8 +81,105 @@ another spec.
    is missing, and the one command that produces it. A refused transition is a successful run of
    this command.
 
-5. If it passes: update Status, set/refresh the **Branch** row from the current branch, update the
-   **Date**, and tick any acceptance criteria you confirmed. Report the transition in one line.
+5. **Write the status with the script — never by editing the table yourself:**
+
+   ```
+   node ${CLAUDE_PLUGIN_ROOT}/scripts/spec-advance.mjs <spec-file> --to <target> \
+     --attest "<what you judged, in your own words>"
+   ```
+
+   This sentence at the top of the file — *"the only command that writes a spec's Status"* — used
+   to have nothing behind it. The gate reported and a model did the writing, so the rule was
+   advice: the same model, the same repo, two runs, two outcomes, and no way to tell afterwards
+   which had happened. The script refuses on any `FAIL`, refuses when a `MANUAL` gate is unsigned,
+   and refuses an attestation under ten characters. It exits 1 on a refusal and 2 when it could
+   not run at all.
+
+   **`--run-suite` turns one of those judgements into a verdict.** Pass it and the gate runs the
+   command §6.1 names, so `suite-green` becomes PASS or FAIL instead of something you vouch for.
+   It is off by default because a gate that always costs minutes is one people route around —
+   opt in where the suite is fast enough to afford it, and keep the honest MANUAL where it is
+   not. A command that cannot be found or that times out reports as MANUAL, never as a red
+   suite: sending somebody to debug tests that never ran is worse than saying so.
+
+   **The command is printed to stderr before it runs, and you should read it.** §6.1 lives in a
+   Markdown file somebody wrote, so passing this flag runs a command that spec chose. The gate
+   refuses anything carrying a shell metacharacter beyond a conservative allowlist — `;`, `|`,
+   `$`, a backtick, redirection, a lone `&`, a glob — and reports MANUAL naming the character,
+   which means run the suite yourself and attest. `&&` and grouping are allowed, so a chain of
+   commands is still possible: what the gate guarantees is that nothing runs unseen, not that a
+   contributor cannot run code.
+
+   **Do not wire `--run-suite` into CI on untrusted branches.** Every control here assumes a human
+   reading a terminal: the command is disclosed on stderr, and the refusal tells that person to run
+   it themselves. A workflow that passes this flag on pull-request content has neither — the §6.1
+   command comes from the contributor who opened the PR, and nobody reads the disclosure. Run the
+   suite in CI the way you normally would, with a command your workflow names, and leave this flag
+   for interactive use.
+
+   `--attest` is where step 3's judgement goes. Write what you actually checked, not "done" — the
+   sentence is recorded against your git identity and read by whoever comes to this spec later.
+
+   **`--unattended` when no human made that judgement.** `--attest` is signed with git's idea of who
+   ran the command, which on an automated run is a person who never read anything — so the record
+   would carry their name against a judgement they did not make. Pass `--unattended` and the record
+   says `mode: "unattended"` instead. It lowers no bar: the ten-character minimum still applies, and
+   every gate still has to pass. It only labels who was there, so
+   `node ${CLAUDE_PLUGIN_ROOT}/scripts/spec-evidence.mjs` can tell the two apart afterwards.
+
+   **Under `--unattended`, `--attest` is required on every target** — including `Approved →
+   Implemented`, which asks for no human judgement at all. Without it the record's `attested` is
+   `null`, and an absent mode reads `human`: an unattended run would leave behind the one record
+   shape that claims a person made the call.
+
+   **`--re-record` refreshes the record for the status a spec already holds.** Acting on a review
+   finding edits files the last gate fingerprinted, so that record reads `stale` for having done
+   the right thing — and without this flag there is no way to refresh it, because the gate refuses
+   a same-status transition with `already <status>`.
+
+   ```
+   node ${CLAUDE_PLUGIN_ROOT}/scripts/spec-advance.mjs <spec-file> --re-record \
+     --attest "<what you judged, in your own words>"
+   ```
+
+   It relaxes exactly that one check. **The `Status` cell does not move**, every other gate for
+   that status runs in full, and any `FAIL` still refuses — a re-record is a re-gate, not a rubber
+   stamp, and it is not a way to make a red record green. Pointed with `--to` at a status the spec
+   does not hold it refuses: refreshing a past status would be writing history that never happened.
+   A record for a status the spec does not hold needs no refreshing at all —
+   `node ${CLAUDE_PLUGIN_ROOT}/scripts/spec-evidence.mjs` reads it as `superseded`, which is
+   history and not a failure, whether the spec moved past that status or back from it.
+
+   **Three more refusals, and each removes a way to re-record something nobody checked:**
+
+   - **At `Draft`** — no gate block exists for it, so the record would be written with the
+     lifecycle check alone examined.
+   - **At `Archived`** — its only gate asks `git branch --merged`, which lists the branches on
+     *this* machine: a merged branch that was pruned reads FAIL, and a merge nobody pushed reads
+     PASS. Re-gating a status granted long ago is exactly where the pruned branch is normal.
+   - **When the branch diff has gone empty** since the record being replaced named files in it.
+     The radius is a three-dot diff from the merge base, which empties the moment the branch
+     merges — so a re-record after the merge would narrow what the status is checked against
+     instead of re-answering it. A *partial* shrink is honest, is named in the output, and
+     proceeds: a file genuinely deleted as part of the work leaves the diff.
+
+   The script writes the Status cell and nothing else. **You still do the rest by hand:** the
+   **Branch** row, the **Date**, any acceptance criteria you confirmed, the Revisions row on a
+   reversal, and the `git mv` on archive. Those are changes a person should watch happen.
+
+6. **What the script leaves behind.** On success it writes an evidence record under
+   `.ml-specs/evidence/` holding the base branch and sha, a hash of every §6 test the gate
+   resolved, a hash of every file this spec's branch changed — **for `Implemented` and `Verified`;
+   an `Approved` record has no file radius, because approving a contract happens before the code
+   exists and it is judged by that contract instead** — the gate verdicts, and your signed
+   attestation. That is what makes the status re-checkable later: delete one of those tests, or
+   rewrite the module, and the record reads `stale` and names the file. Commit it with the spec.
+
+   A record that no longer digests to its own contents reads `unsound` — it was edited after the
+   gate wrote it. Do not edit records; re-run the gate. That stays true of a record whose spec has
+   moved on: `superseded` never outranks `unsound`, so advancing a spec cannot launder one.
+
+7. Report the transition in one line.
 
 ## The gates
 
@@ -98,3 +199,31 @@ changed and why, and it un-ticks the acceptance criteria that no longer hold.
 
 Next step after a successful transition: `Approved` → `/ml-specs:spec-build <spec-file>` ·
 `Implemented` → `/ml-specs:spec-verify <spec-file>` · `Verified` → `/ml-specs:pr <spec-file>` · `Archived` → done.
+
+**Then offer those steps as actions.** Put them to the user with the AskUserQuestion tool —
+`header: "Next step"`, `multiSelect: false`, one option per concrete command below, the one you
+recommend **first** and its label suffixed `(Recommended)`, with the *why* and the cost in its
+description. Offer only the row of the map above that matches the status you actually wrote:
+
+- after `Approved` → `/ml-specs:spec-build <spec-file>` **(Recommended)** — the IMPLEMENT phase.
+  `/ml-specs:repo-impact` is the second option: which other services this breaks, answered before
+  the code exists rather than after a reviewer finds it.
+- after `Implemented` → `/ml-specs:spec-verify <spec-file>` **(Recommended)** — the adversarial pass
+  that gates `Verified`; `/code-review` is the second option, a different question about the diff.
+- after `Verified` → `/ml-specs:pr <spec-file>` **(Recommended)** — the PR title and body. This
+  produces text; it does not open anything. `/ml-specs:spec-fanout` is the second option, for a
+  contract change that lands in more than one repo: same derived branch name in each, so the set is
+  provably one change.
+- after `Archived` the loop is over: **do not ask.** A menu at the end of a finished loop is the
+  menu-fatigue this convention is trying to avoid.
+
+**On a refused transition** (step 4) the options are the one command that produces the missing
+evidence — not the transition again. Re-offering a gate that just refused teaches the human to
+click past the question.
+
+**Navigation, not consent** — never offer a step already ruled out, and never ask permission for
+something this command should simply do. **No double question:** if this run already stopped on a
+blocking decision and that is the last thing the user answered, that decision *is* the close — name
+the next step in prose and stop. **Only a command asks, never an agent** — a subagent has no
+channel to the human. The prose next-step line stays either way: it is what the transcript keeps
+and all a non-interactive run emits.

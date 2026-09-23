@@ -1,6 +1,10 @@
 ---
 name: knowledge-retrieval
 description: How to navigate a repo's learned knowledge layer (CLAUDE.md, docs/PATTERNS.md, docs/ARCHITECTURE.md, docs/ESTATE.md) without blowing up context — sharded architecture docs, the 1-hop dependency closure for interlinked modules, and designing a change that crosses a module or service boundary. Load when the repo's docs are sharded (docs/architecture/*.md), when a task touches a shared event/API/type/table, or when a change spans more than one module or service.
+capability: architecture
+inputs: A task that crosses a module or service boundary, plus the repo's knowledge layer — CLAUDE.md, docs/PATTERNS.md, docs/ARCHITECTURE.md and its shards.
+outputs: The bounded set of documents to read for this change, and the module contracts it touches on both sides.
+standard: Bounded 1-hop dependency closure over a sharded knowledge layer (docs/ARCHITECTURE.md's module contract index)
 ---
 
 # Retrieving from a sharded / interlinked knowledge layer

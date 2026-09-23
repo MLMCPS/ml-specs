@@ -6,7 +6,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
-import { parseCriteria, splitCell, resolveStatus, listSpecs, LIFECYCLE } from './specs.mjs';
+import { parseCriteria, splitCell, resolveStatus, listSpecs, LIFECYCLE, rigorOf, RIGOR } from './specs.mjs';
 
 describe('acceptance criteria', () => {
   test('the template style parses', () => {
@@ -119,6 +119,41 @@ describe('listSpecs filters by filename', () => {
       assert.deepEqual(specs.map((s) => s.file), ['specs/0001-real.md']);
       assert.equal(specs[0].id, '0001');
       assert.equal(specs[0].slug, 'real');
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('rigor', () => {
+  test('AC8: a declared rigor is carried through', () => {
+    assert.equal(rigorOf('deep'), 'deep');
+    assert.equal(rigorOf('light'), 'light');
+    assert.deepEqual(RIGOR, ['light', 'standard', 'deep']);
+  });
+
+  test('AC9/AC10: absent, empty and unrecognised all resolve to standard', () => {
+    // Fail toward MORE rigor, never less. A spec written before the row existed keeps today's
+    // behaviour, and a typo cannot silently weaken a suite — only one of those directions is safe.
+    for (const v of ['', null, undefined, '—', 'lite', 'DEEPER', 'light | standard | deep']) {
+      assert.equal(rigorOf(v), 'standard', `${JSON.stringify(v)} should resolve to standard`);
+    }
+  });
+
+  test('AC8: the cell is read case- and decoration-insensitively', () => {
+    for (const v of ['deep', 'DEEP', ' Deep ', '`deep`', '**deep**']) assert.equal(rigorOf(v), 'deep');
+  });
+
+  test('AC8/AC9: listSpecs carries rigor for every spec, defaulting to standard', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'mlspecs-rigor-'));
+    try {
+      mkdirSync(join(dir, 'specs'), { recursive: true });
+      const spec = (n, row) => `# Spec: ${n}\n\n| | |\n|---|---|\n${row}| **Status** | Draft |\n\n- [ ] **AC1** — a\n`;
+      writeFileSync(join(dir, 'specs', '0001-a.md'), spec('a', '| **Rigor** | deep |\n'));
+      writeFileSync(join(dir, 'specs', '0002-b.md'), spec('b', ''));
+
+      const got = Object.fromEntries(listSpecs(dir).map((s) => [s.id, s.rigor]));
+      assert.deepEqual(got, { '0001': 'deep', '0002': 'standard' });
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

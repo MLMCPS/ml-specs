@@ -22,6 +22,7 @@ import { fileURLToPath } from 'node:url';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { runChecks } from '../templates/ci/knowledge-check.mjs';
 import { listSpecs as parseSpecs, analyze } from '../scripts/lib/specs.mjs';
+import { nextSpecNumber as nextSpecNumberShared } from '../scripts/lib/board.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const PROTOCOL_VERSION = '2024-11-05';
@@ -35,7 +36,7 @@ const ROOT = resolve(rootFlag !== -1 ? (argv[rootFlag + 1] ?? '.') : process.cwd
 // Version skew is the predictable failure of distributing this: one teammate on a stale npx
 // cache, another on a fresh plugin update, both reporting different answers. Make "what am I
 // actually running?" a one-liner rather than an archaeology exercise.
-const VERSION = '1.2.0';
+const VERSION = '1.3.0';
 if (argv.includes('--version') || argv.includes('-v')) {
   console.log(`ml-specs-mcp ${VERSION}  (${fileURLToPath(import.meta.url)})`);
   process.exit(0);
@@ -133,43 +134,9 @@ function listSpecs() {
   }));
 }
 
-function nextSpecNumber() {
-  // Every branch, not just the working tree — otherwise two people speccing in parallel
-  // both take the next number and collide at merge.
-  const used = new Set();
-  for (const s of listSpecs()) used.add(Number(s.number));
-
-  const hasRemote = git('remote') !== '';
-  let fetched = false;
-  if (hasRemote) {
-    try {
-      execFileSync('git', ['-C', ROOT, 'fetch', '--quiet'], { stdio: 'ignore' });
-      fetched = true;
-    } catch {
-      fetched = false; // offline, or no credentials — reported below, never silently assumed
-    }
-  }
-  const historical = git(
-    'log', '--all', '--pretty=format:', '--name-only', '--diff-filter=A', '--', 'specs/[0-9]*',
-  );
-  for (const line of historical.split('\n')) {
-    const m = basename(line.trim()).match(/^(\d{4})-/);
-    if (m) used.add(Number(m[1]));
-  }
-
-  const max = used.size ? Math.max(...used) : 0;
-  return {
-    next: String(max + 1).padStart(4, '0'),
-    highestUsed: used.size ? String(max).padStart(4, '0') : null,
-    countUsed: used.size,
-    scannedAllBranches: historical !== '',
-    remoteChecked: fetched,
-    warning: fetched ? null
-      : hasRemote
-        ? 'Remote exists but fetch failed (offline or no credentials) — branches you have not pulled were not counted, so a collision is possible.'
-        : 'No git remote — only local branches were counted.',
-  };
-}
+// `nextSpecNumber` moved to `scripts/lib/board.mjs` (spec 0036) so the CLI and this server share
+// one implementation. The copy that lived here read `s.number`, a field `listSpecs` does not
+// return, so every working-tree spec contributed NaN — fixed in the move.
 
 // --- deterministic scripts as tools ------------------------------------------
 // scripts/ holds the half of the toolkit that must not be a model call: the lifecycle gate, the
@@ -296,6 +263,31 @@ const TOOLS = [
       'tree, so parallel spec authoring does not collide. Fetches first when a remote exists ' +
       'and says so when it could not.',
     inputSchema: { type: 'object', properties: {} },
+  },
+  {
+    name: 'spec_evidence',
+    description:
+      'Does what the gates already proved still describe this repository? Every transition ' +
+      '/ml-specs:spec-advance allows leaves a record of the files it read and the contract it ' +
+      'read them against; this asks whether those records still stand. ' +
+      'Five verdicts: fresh (unchanged), stale (a file the gate read has changed — re-run the ' +
+      'gate), amended (the SPEC moved after it passed: a criterion reworded or removed, or a §6 ' +
+      'row repointed — decide whether that was intended BEFORE re-running anything), ' +
+      'unsound (the record was edited after it was written — do not edit records), and ' +
+      'superseded (the spec no longer holds that status, so the record was NOT judged). ' +
+      'A verdict of unknown is NOT a failure: a record that cannot be judged has not been shown ' +
+      'wrong, and a spec with no record predates evidence recording. ' +
+      'exitCode 1 means at least one record it JUDGED is failing. exitCode 0 does NOT mean every ' +
+      'record stands: read `judged` against `total`, because superseded records are held out of ' +
+      'the judgement, and supersession rests on a digest that resists accident rather than a ' +
+      'deliberate edit. Do not report a spec as clear on exitCode 0 alone when `superseded` is ' +
+      'non-zero — say how many were judged.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        failing: { type: 'boolean', description: 'Only the records that no longer stand. Omit for all of them.' },
+      },
+    },
   },
   {
     name: 'spec_gate',
@@ -449,12 +441,16 @@ function callTool(name, args = {}) {
     }
 
     case 'spec_next_number':
-      return nextSpecNumber();
+      return nextSpecNumberShared(ROOT);
 
     case 'spec_gate': {
       if (!args.spec) throw new Error('spec_gate needs a spec: a path (specs/0001-foo.md) or a bare id (0001)');
       const extra = args.to ? ['--to', String(args.to)] : [];
       return runScript('spec-gate.mjs', [resolveSpecPath(args.spec), '--root', ROOT, '--json', ...extra]);
+    }
+
+    case 'spec_evidence': {
+      return runScript('spec-evidence.mjs', ['--root', ROOT, '--json', ...(args.failing ? ['--failing'] : [])]);
     }
 
     case 'spec_trace': {

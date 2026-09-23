@@ -233,8 +233,15 @@ describe('the repo validator knows the new agent', () => {
       mkdirSync(join(dir, 'ml-specs', 'commands'), { recursive: true });
       copyFileSync(VALIDATOR, join(dir, 'scripts', 'validate-plugin.mjs'));
       mkdirSync(join(dir, 'ml-specs', 'scripts', 'lib'), { recursive: true });
-      copyFileSync(join(ROOT, 'ml-specs', 'scripts', 'lib', 'file-identity.mjs'),
-        join(dir, 'ml-specs', 'scripts', 'lib', 'file-identity.mjs'));
+      // The validator's `lib/` closure, whole. It was one file; spec 0051 made it three
+      // (`prompt-shape.mjs` → `text.mjs`), and a per-file list breaks every harness the next time
+      // it grows.
+      for (const f of readdirSync(join(ROOT, 'ml-specs', 'scripts', 'lib'))) {
+        if (f.endsWith('.mjs') && !f.endsWith('.test.mjs')) {
+          copyFileSync(join(ROOT, 'ml-specs', 'scripts', 'lib', f),
+            join(dir, 'ml-specs', 'scripts', 'lib', f));
+        }
+      }
       // The agent is referenced, correctly spelled, and ml-specs/agents/explainer.md is absent.
       writeFileSync(
         join(dir, 'ml-specs', 'commands', 'explain.md'),

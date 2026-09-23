@@ -7,8 +7,8 @@
   "plugins": [
     {
       "name": "ml-specs",
-      "description": "Spec-driven development for any stack (Java/Spring, React, Node/Express, NestJS; MySQL/PostgreSQL/MongoDB): a stack-aware coding agent + spec author/developer/reviewer/pr-author agents, and the evidence-gated loop /ml-specs:spec-explore, /ml-specs:spec, /ml-specs:spec-review, /ml-specs:spec-build, /ml-specs:spec-verify, /ml-specs:spec-advance, /ml-specs:spec-fanout, /ml-specs:pr, plus /ml-specs:code, /ml-specs:explain, /ml-specs:fix, /ml-specs:handoff, /ml-specs:nfr and the knowledge layer /ml-specs:repo-init, /ml-specs:repo-rollout, /ml-specs:repo-adopt, /ml-specs:repo-skills, /ml-specs:repo-estate, /ml-specs:repo-impact, /ml-specs:repo-refresh, /ml-specs:repo-doctor, /ml-specs:repo-status.",
-      "version": "1.2.0",
+      "description": "Spec-driven development for any stack (Java/Spring, React, Node/Express, NestJS; MySQL/PostgreSQL/MongoDB): a stack-aware coding agent + spec author/developer/reviewer/pr-author agents, and the evidence-gated loop /ml-specs:spec-explore, /ml-specs:spec, /ml-specs:spec-review, /ml-specs:spec-build, /ml-specs:spec-verify, /ml-specs:spec-advance, /ml-specs:spec-fanout, /ml-specs:pr, /ml-specs:pr-address, plus /ml-specs:code, /ml-specs:explain, /ml-specs:fix, /ml-specs:handoff, /ml-specs:next, /ml-specs:nfr and the knowledge layer /ml-specs:repo-init, /ml-specs:repo-rollout, /ml-specs:repo-adopt, /ml-specs:repo-skills, /ml-specs:repo-estate, /ml-specs:repo-impact, /ml-specs:repo-refresh, /ml-specs:repo-doctor, /ml-specs:repo-status, /ml-specs:repo-hosts, /ml-specs:repo-skill, /ml-specs:spec-new, /ml-specs:repo-cycle, /ml-specs:repo-wiring.",
+      "version": "1.3.0",
       "source": "./ml-specs"
     }
   ]

@@ -161,8 +161,14 @@ describe('the handoff command is well-formed', () => {
     // AC4. Both halves: the literal reference, the file on disk, and the REAL validator — check 7
     // (validate-plugin.mjs:264-271) resolves every ${CLAUDE_PLUGIN_ROOT}/… a command names, so a
     // typo on either side is an error, not a runtime surprise in someone else's repo.
-    assert.ok(command.includes('${CLAUDE_PLUGIN_ROOT}/templates/handoff/TEMPLATE.md'),
-      'handoff.md does not reference the handoff template');
+    // Scoped to the numbered STEP that reads the template, not to the file. The path also appears
+    // in a prose aside further down (`handoff.md:89`), so a whole-file `includes` passed with the
+    // real instruction gutted — verified by mutation. What this criterion is about is the command
+    // being told to read the template, not the string existing somewhere in the file.
+    const step = command.split(/\n(?=\d+\. )/).find((s) => /^2\. /.test(s));
+    assert.ok(step, 'handoff.md no longer has a step 2');
+    assert.ok(step.includes('${CLAUDE_PLUGIN_ROOT}/templates/handoff/TEMPLATE.md'),
+      'handoff.md step 2 no longer reads the handoff template by its plugin-root path');
     assert.ok(existsSync(join(PLUGIN, 'templates', 'handoff', 'TEMPLATE.md')),
       'ml-specs/templates/handoff/TEMPLATE.md is missing');
 
@@ -624,11 +630,16 @@ describe('the surfaces the gates do not watch', () => {
     const arch = readGenerated('docs/ARCHITECTURE.md');
     const skipped = [];
     if (shard) {
-      assert.match(shard, /^> Shard of .*\. Four files\./m,
-        'docs/architecture/hooks.md still says three files ship');
+      // Derived from disk, like the CLI and lib counts below — a digit typed here goes stale the
+      // next time a hook ships, and the shard was already wrong once for exactly that reason.
+      const shipped = readdirSync(join(PLUGIN, 'hooks')).filter((f) => f.endsWith('.sh'));
+      const words = ['zero', 'one', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven'];
+      assert.match(shard, new RegExp(`^> Shard of .*\\. ${words[shipped.length + 1]} files\\.`, 'm'),
+        `docs/architecture/hooks.md miscounts what ships: ${shipped.length} hooks + hooks.json`);
       const table = shard.slice(shard.indexOf('| Hook | Event | File |'), shard.indexOf('Manifest:'));
       const rows = table.split('\n').filter((l) => /^\| .* \| .* \| `ml-specs\/hooks\//.test(l));
-      assert.equal(rows.length, 3, `the registered-hooks table has ${rows.length} rows, expected 3`);
+      assert.equal(rows.length, shipped.length,
+        `the registered-hooks table has ${rows.length} rows, ml-specs/hooks/ holds ${shipped.length}`);
       assert.ok(rows.some((r) => r.includes('`ml-specs/hooks/handoff-notice.sh`') && r.includes('SessionStart')),
         'the registered-hooks table has no SessionStart row for handoff-notice.sh');
     } else skipped.push('docs/architecture/hooks.md');

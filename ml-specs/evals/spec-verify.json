@@ -1,0 +1,26 @@
+{
+  "command": "spec-verify",
+  "why": "VERIFY is read-only. It judges; it does not fix. A verify that edits the thing it is judging cannot be trusted to judge it.",
+  "cases": [
+    {
+      "name": "judges without editing the spec or the code",
+      "given": {
+        "files": {
+          "specs/0001-thing.md": "# Spec: a thing\n\n| | |\n|---|---|\n| **Status** | Draft |\n| **Branch** | feat/thing |\n| **Author** | Ada |\n\n## 5. Acceptance criteria\n- [ ] **AC1** \u2014 it validates the token.\n\n## 6. Test plan\n| AC | Test file | What it proves |\n|---|---|---|\n| AC1 | `test/thing.test.mjs` | it validates |\n\n## 8. Open questions\nNone blocking.\n",
+          "src/thing.mjs": "export const f = 1;\n"
+        }
+      },
+      "invoke": "/ml-specs:spec-verify specs/0001-thing.md",
+      "expect": [
+        {
+          "unchanged": "specs/0001-thing.md",
+          "why": "read-only means the spec too"
+        },
+        {
+          "unchanged": "src/thing.mjs",
+          "why": "and the implementation"
+        }
+      ]
+    }
+  ]
+}

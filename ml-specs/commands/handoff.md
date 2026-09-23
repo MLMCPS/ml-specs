@@ -13,6 +13,19 @@ approach that was rejected and why, the work left half-done on purpose, the test
 deliberately, the next concrete step — none of that is recoverable from the code alone, which is why
 the next session re-derives it badly.
 
+**A note earns its place only when work stops somewhere other than a finished state.** Write one
+when the session is ending with work open, when the next person or agent picks up mid-flight, or
+when you are stopped on a decision only a human can make.
+
+**Say so and write nothing when the work actually finished** — the spec reached `Verified`, the
+suite is green and the PR is up, with no open blocker. There the spec, its Revisions table and the
+PR already are the continuity, and a note repeating them starts drifting from them the moment
+either one moves. A handoff that duplicates a durable artifact is a second source of truth about
+the same facts, and the stale one always wins the next argument.
+
+If in doubt, ask what the next reader would not find by reading the spec and `git log`. If the
+answer is nothing, there is no note to write.
+
 <!--
   This command runs INLINE in the main context and delegates to no agent, deliberately. A subagent
   starts with fresh context and cannot see the parent session's conversation, which is this

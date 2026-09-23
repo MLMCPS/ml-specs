@@ -66,6 +66,14 @@ Steps:
    tell the user to run `/ml-specs:repo-init` first, or fall back to the plugin template at
    `${CLAUDE_PLUGIN_ROOT}/templates/specs/TEMPLATE.md`.)
 
+   **Decide the `Rigor` row, and say why in one line in §1.** The template ships it pre-filled with
+   `standard`, so "fill every section" never prompts a decision and it stays `standard` by default
+   rather than by choice. Size it by **uncertainty and blast radius, not by diff size** — a
+   five-line change to an authorization check outranks a five-hundred-line CRUD screen. The
+   `developer` and `reviewer` agents both obey the row, and the reviewer raises a finding when §1
+   carries no reason, because a `light` that should have been `deep` looks exactly like a `light`
+   that was right. `standard` is a fine answer; an unstated one is not.
+
 5. **Actually create the file** — use the Write tool to save it as `specs/NNNN-<slug>.md`,
    creating the `specs/` directory if it doesn't exist. Do NOT just print the spec in chat — it must
    land on disk.
@@ -93,6 +101,28 @@ Steps:
    record it with `/ml-specs:spec-advance specs/NNNN-<slug>.md Approved`; the next step after that is
    `/ml-specs:spec-build specs/NNNN-<slug>.md`. Leave the Status at `Draft` yourself — you don't approve
    your own spec.
+
+**Then offer those steps as actions.** Put them to the user with the AskUserQuestion tool —
+`header: "Next step"`, `multiSelect: false`, one option per concrete command below, the one you
+recommend **first** and its label suffixed `(Recommended)`, with the *why* and the cost in its
+description:
+
+- `/ml-specs:spec-advance specs/NNNN-<slug>.md Approved` **(Recommended)** — once they have read
+  it. Choosing this **is** their approval, recorded by the one command that writes a Status; it is
+  not you approving your own spec.
+- `/ml-specs:spec-review specs/NNNN-<slug>.md` — a second adversarial pass before they spend a
+  read, worth it on a spec that changes a contract.
+
+Sending the spec back for changes is not an option here — the host adds its own "Other", and the
+send-back path below covers it.
+
+**Navigation, not consent** — never offer a step already ruled out, and never ask permission for
+something this command should simply do. **No double question:** if this run already stopped on a
+blocking decision and that is the last thing the user answered, that decision *is* the close — name
+the next step in prose and stop. The step-3 contract questions are not that decision: they come
+before the spec exists, not after it. **Only a command asks, never an agent** — a subagent has no
+channel to the human. The prose next-step line stays either way: it is what the transcript keeps
+and all a non-interactive run emits.
 
 **If the user sends the spec back for changes:** update the file, add a row to its **Revisions**
 table recording what changed and why, and point them at that row. They should only have to re-read

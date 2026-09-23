@@ -5,13 +5,27 @@
 | **Ticket** | XXX-0000 |
 | **Project / service** | <repo or service name> |
 | **Stack** | <e.g. Java/Spring, React, Node/Express, NestJS — fill from the repo> |
+| **Rigor** | standard |
 | **Status** | Draft \| Approved \| Implemented \| Verified \| Archived |
 | **Branch** | <branch this is built on — set by `/ml-specs:spec-advance`; `—` until work starts> |
+| **Touches** | — |
 | **Author** | <name> |
 | **Date** | YYYY-MM-DD |
 
 > Status is written by `/ml-specs:spec-advance`, which checks the evidence each transition requires
 > (see `specs/README.md`). Don't hand-edit it — a status nobody checked is worth nothing.
+>
+> **Rigor** is `light`, `standard` or `deep`, and it scales how much ceremony this spec gets —
+> never how low the seam analysis may go. Size it by **uncertainty and blast radius, not diff
+> size**: a five-line change to an authorization check outranks a five-hundred-line CRUD screen.
+> State the reason in one line in §1 — a `light` that should have been `deep` looks exactly like a
+> `light` that was right, and a reviewer has nothing to argue with otherwise. Absent, empty, `—`
+> or unrecognised means `standard`: fail toward more rigor, never less.
+>
+> **Touches** bounds what an agent may write while this spec is active, enforced before the edit
+> lands: a comma-separated list of paths, e.g. `src/billing/, test/billing/`. Leave it `—` and
+> nothing is bounded — that is the honest default, not a gap, because a guard that blocks a file
+> you can see is in scope is a guard somebody switches off.
 
 ## Revisions
 <Skip this section entirely if the spec was approved first pass — it exists only to bound

@@ -1,0 +1,21 @@
+{
+  "command": "pr-address",
+  "why": "The one command that commits and pushes by design, and only after showing the human the diff. With no PR to address, it must do nothing at all.",
+  "cases": [
+    {
+      "name": "with no PR, changes nothing",
+      "given": {
+        "files": {
+          "src/thing.mjs": "export const f = 1;\n"
+        }
+      },
+      "invoke": "/ml-specs:pr-address",
+      "expect": [
+        {
+          "unchanged": "src/thing.mjs",
+          "why": "no PR means no work to apply"
+        }
+      ]
+    }
+  ]
+}
